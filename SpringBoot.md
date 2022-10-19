@@ -1935,7 +1935,7 @@ public @interface EnableAutoConfiguration {
 
 ```
 
-自动配置文件，会有@ConditionalOnMissingBean这个注解，SpringBoot默认会在底层配好所有组件，若用户已经自己配置，则用户优先
+**自动配置文件，会有@ConditionalOnMissingBean这个注解，SpringBoot默认会在底层配好所有组件，若用户已经自己配置，则用户优先**
 
 **总结**
 
@@ -1952,7 +1952,7 @@ public @interface EnableAutoConfiguration {
 - 定制化配置
 
   - 用户可直接自己@Bean重新方法替换底层的组件
-  - 用户也根据这个组件是获取的配置文件什么值再去配置文件中修改**（表明为什么SpringBoot会写配置就能完成很多功能）**
+  - 用户也根据这个组件是获取的配置文件什么值再去配置文件中修改**（这也解释了为什么SpringBoot会写配置就能完成很多功能）**
 
 ==**xxxxxAutoConfiguration ---> 组件  --->** **xxxxProperties里面拿值  ----> application.properties**==
 
@@ -1972,7 +1972,7 @@ SpringBoot 在启动时会扫描外部引用 jar 包中的`META-INF/spring.facto
 
   - @SpringBootConfiguration （其内部是@Configuration，一个配置类，本质为配置文件，允许在 Spring 上下文中注册额外的 bean 或导入其他配置类）
   - @ComponentScan   （默认是开启扫描所在包下的所有类）
-  - **@EnableAutoConfiguration** **（开启自动配置）**
+  - **@EnableAutoConfiguration（开启自动配置）**
 - @EnableAutoConfiguration注解中有两个注解修饰，最重要的是这个注解有@Import(AutoConfigurationImportSelector.class)
 - @Import(AutoConfigurationImportSelector.class)这个注解有import注解，加载AutoConfigurationImportSelector（自动装配类）类。
   - 这个类中会获取AutoConfigurationEntry **自动配置入口，实现了所有的自动配置，并加载到IOC容器**
@@ -1980,18 +1980,20 @@ SpringBoot 在启动时会扫描外部引用 jar 包中的`META-INF/spring.facto
 
     - 这些类名从Spring -boot-autoconfigure这个jar包的spring.factories文件中获取所有的自动配置类的信息（不能叫全类名，因为可能还有条件）
     - **所有 Spring Boot Starter 下的`META-INF/spring.factories`都会被读取到。**
-  - 通过全类名，利用Spring工厂加载器调用loadSpringFactories加载到容器中
-    - 默认是开启127个配置项，但由于配置项有contional条件，所以是按需开启
+  - 通过全类名，利用**Spring工厂加载器**调用loadSpringFactories加载到容器中
+    - 默认是开启127个配置项，但由于配置项有contional条件，会进行过滤，所以是按需开启
 
 ![img](https://p6-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/3c1200712655443ca4b38500d615bb70~tplv-k3u1fbpfcp-watermark.image)
 
-**怎样实现一个start？**
+**怎样实现一个starter？**
 
 - 首先创建一个`xxx--spring-boot-starter`工程
 - 导入spring boot相关依赖
 - 自定义自动配置类  autoconfigure
-- 在`xxxx-spring-boot-starter`工程的 resources 包下创建`META-INF/spring.factories`文件
-- 最后导入starter
+- 在`xxxx-spring-boot-starter`工程的 resources 包下创建`META-INF/spring.factories`文件，写下全类名这些信息
+- 最后在其他工程的pom文件中导入starter
+  - 其他工程导入后，会扫描`xxx--spring-boot-starter`工程的`spring.factories`文件，从而得到类信息，通过Spring工厂加载器加载
+
 
 
 
@@ -2039,7 +2041,9 @@ idea中搜索安装lombok插件
 
 ### 05，Web开发
 
-![yuque_diagram](SpringBoot.assets/yuque_diagram.jpg)
+![yuque_diagram](/yuque_diagram.jpg)
+
+
 
 #### 2，简单功能分析
 
@@ -2320,7 +2324,9 @@ spring:
 
 ###### 3.1.2请求映射原理
 
-![image-20220110163131884](C:\Users\Administrator\Nutstore\1\我的坚果云\springBootImg\image-20220110163131884.png)
+![image-20220110163131884](image-20220110163131884.png)
+
+
 
 SpringMVC功能分析都从 org.springframework.web.servlet.DispatcherServlet-》doDispatch（）
 
@@ -2364,15 +2370,17 @@ HandlerMapping为多个，（处理器映射，即通过求取网址来判断交
 
    HandlerMapping中配置了请求和Handler（controller的对应信息）
 
-![](C:\Users\Administrator\Nutstore\1\我的坚果云\springBootImg\image-20220110170043428.png)
+![](image-20220110170043428.png)
+
+
 
 **RequestMappingHandlerMapping**：保存了所有@RequestMapping 和handler的映射规则
 
-![image-20220110170147408](C:\Users\Administrator\Nutstore\1\我的坚果云\springBootImg\image-20220110170147408.png)
+![image-20220110170147408]( image-20220110170147408.png)
 
 所有的请求映射都在HandlerMapping中
 
-- SpringBoot自动配置欢迎页的 WelcomePageHandlerMapping 。访问 /能访问到index.html；
+- **SpringBoot自动配置欢迎页的 WelcomePageHandlerMapping 。访问 /能访问到index.html；**
 - SpringBoot自动配置了默认 的 RequestMappingHandlerMapping
 - 请求进入getHandler方法，遍历所有的HandlerMapping，查看是否满足请求信息
   - 如果满足，则返回该Handler
@@ -2500,9 +2508,9 @@ Map<String,Object> map,  Model model, HttpServletRequest request   **都是可�
 private final ModelMap defaultModel = new BindingAwareModelMap();
 ```
 
-![image-20220111150023038](D:\我的坚果云\springBootImg\image-20220111150023038.png)
+![image-20220111150023038](springBootImg\image-20220111150023038.png)
 
-![image-20220111151138287](D:\我的坚果云\springBootImg\image-20220111151138287.png)
+![image-20220111151138287](springBootImg\image-20220111151138287.png)
 
 
 
@@ -2550,7 +2558,7 @@ mappedHandler = this.getHandler(processedRequest);
 HandlerAdapter ha = this.getHandlerAdapter(mappedHandler.getHandler());
 ```
 
-![image-20220111090834908](D:\我的坚果云\springBootImg\Image5.png)
+![image-20220111090834908](springBootImg\Image5.png)
 
 **HandlerAdapter**：
 
@@ -2588,7 +2596,7 @@ invokeHandlerMethod()中：
 
  **this.returnValueHandlers():返回值处理器**，即方法可以返回的返回值类型，Model ，view，或ModelAndView共15种
 
-![image-20220111092905515](D:\我的坚果云\springBootImg\image-20220111092905515.png)
+![image-20220111092905515]( springBootImg\image-20220111092905515.png)
 
 ##### 3.5.1 执行目标方法，获取目法的参数值
 
@@ -5093,11 +5101,11 @@ spring.profiles.group.mytest[0]=test
 
 ==**指定环境优先，外部优先，后面的可以覆盖前面的同名配置项**==
 
-#### 4，SpringBoot原理
+## 4，SpringBoot原理
 
 Spring原理【[Spring注解](https://www.bilibili.com/video/BV1gW411W7wy?p=1)】、**SpringMVC**原理、**自动配置原理**、SpringBoot原理
 
-##### 1，SpringBoot启动过程
+## ==1，SpringBoot启动过程==
 
 - 创建SpringBoot
 
@@ -5106,7 +5114,7 @@ Spring原理【[Spring注解](https://www.bilibili.com/video/BV1gW411W7wy?p=1)�
   - bootstrapRegistryInitializers：初始化启动引导器，**（**List<Bootstrapper>**）：去spring.factories文件中找** org.springframework.boot.**==Bootstrapper==**
   - 找==ApplicationContextInitializer==，**去spring.factories文件中找** 
     - List<ApplicationContextInitializer<?>> **initializers**
-  - 找==ApplicationListener==，应用监听器 ，去**spring.factories**找** **ApplicationListener**
+  - 找==ApplicationListener==，应用监听器 ，去**spring.factories**找ApplicationListener**
 
   - - - List<ApplicationListener<?>> **listeners**
 
@@ -5133,7 +5141,7 @@ Spring原理【[Spring注解](https://www.bilibili.com/video/BV1gW411W7wy?p=1)�
   - 准备环境prepareEnvironment（）设置环境信息
 
     - 返回或创建基础环境信息对象。ApplicationServletEnvironment
-    - 配置环境信息对象
+    - 配置环境信息对象      application.yml
       - 读取配置源的配置属性值
     - 绑定环境信息
     - **通知所有监听器listeners.environmentPrepared，当前环境准备完成**
@@ -5184,71 +5192,20 @@ Spring原理【[Spring注解](https://www.bilibili.com/video/BV1gW411W7wy?p=1)�
   
 - running如果有问题。继续通知 failed 。调用所有 Listener 的 failed；通知所有的监听器 failed
 
+# 复习
 
+## 注解
 
+- @AliasFor 表示别名：它可以注解到自定义注解的两个属性上，表示这两个互为别名
 
 
 
+## MVC
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+- Spring在启动时，默认加载HandlerMaping，保存所有的请求request以及处理方法。默认加载HandlerMaping会其中加入一个欢迎页，即请求‘/’到index.html页面
+  - **RequestMappingHandlerMapping**：保存了所有@RequestMapping 和handler的映射规则
+- 参数解析
+  - Spring中有多个参数解析器，会尝试解析该参数
 
 
 
