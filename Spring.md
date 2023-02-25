@@ -591,7 +591,7 @@ context:include-filter 添加指定
 
 通过该注释，自动为属性赋值
 
-#### **步骤**
+#### 步骤
 
 1. 按类型查找
 
@@ -1084,7 +1084,7 @@ ConcurrentHashMap为map。key为那么，value为instance
 
 
 
-## ==**Bean的周期**==
+## ==Bean的周期==
 
 IOC启动创建了所有的单实例对象
 
@@ -1092,11 +1092,13 @@ Bean的生命周期
 
 IOC启动过程，即单实例对象创建过程
 
+ApplicationContext context = new ClassPathXmlApplicationContext("ioc.xml");
+
 - 通过xml配置文件，创建IOC容器
-  - 在IOC容器内通过调用refresh方法，将所有的对象创建（可说可不说，真正的流程不是讲调用了哪个方法）
-    - 首先spring加载并解析配置文件，bean的名称，作用域这些信息
+  - 在IOC容器内通过调用refresh方法，将所有的对象创建
+    - 首先spring加载并解析xml配置文件，bean的名称，作用域这些信息
     - 把要创建的所有Bean保存到一个（beanFactory）bean工厂
-    - IOC容器实现了BeanFactory来创建对象
+    - //IOC容器实现了BeanFactory来创建对象
     - 通过bean工厂来创建对象
       - 首先初始化所有的单实例对象
         - 保存所有要创建bean的id，后续通过id来获取要创建的bean的相关信息
@@ -1130,7 +1132,7 @@ IOC启动过程，即单实例对象创建过程
 - 调用bean的初始化方法**（此方法需要使用者自动配置，否则不会生效；一般用来完成一些自定义的初始化过程）**
 - 后置处理器after方法
 - 获取bean实例
-- 容器关闭，调用bean的销毁方法（需要自己配置销毁方法）
+- 容器关闭，调用bean的销毁方法（实现DisposableBean接口，重写destroy（）方法，调用该方法即可）
 
 **后置处理器方法**
 
@@ -1412,7 +1414,7 @@ spring对通知方法的参数列表要求严格
 
 ![Image](SpringImg\Image2223)
 
-
+![Image2223](Spring.assets/Image2223.png)
 
 多切面 的执行顺序：按切面类的首字母顺序。或者配置@order顺序
 
@@ -4268,6 +4270,8 @@ DefaultHandlerExceptionResolver：  默认处理异常方法的解析器
 </bean>
 ```
 
+
+
 ## 12，SpringMVC-运行流程
 
 1. **所有请求，前端控制器（DispatcherServlet）收到请求，调用doDispatch进行处理。**
@@ -4291,12 +4295,6 @@ DefaultHandlerExceptionResolver：  默认处理异常方法的解析器
       1. **视图解析器根据视图名得到视图对象**
       2. **视图对象调用render方法，进行渲染**
    3. **执行拦截器的afterCompletion**
-
-
-
-
-
-
 
 
 
@@ -5186,7 +5184,7 @@ sql：抽取可用的sql语句
 本质为一个Map，能保存查询出的一些数据，方便下次查询
 
 - 一级查询：线程级别的查询，本地查询，sqlSession级别的缓存。即一个session中，同一个请求，只发送第一次。剩余请求在缓存中获取
-- 二级缓存：全局作用域缓存
+- 二级缓存：二级缓存是 Mapper 级别，一级缓存是 SqlSession 级别，多个 SqlSession 级别的一级缓存可以共享一个 Mapper 级别的二级缓存。
 
 ### 2，一级缓存
 
@@ -5214,7 +5212,7 @@ SqlSession级别的缓存；默认缓存是一直存在的
 
 **步骤**
 
-1. 在全局配置文件，mybatis-config.xml中添加如下设置
+1. 在全局配置文件，mybatis-config.xml中开启二级缓存
 
    ```xml
    <settings>
@@ -5294,7 +5292,7 @@ MyBatits的Cache并不专业，可以导入包，实现强大功能
 
 
 
-
+![img](Spring.assets/v2-2644b426ce5de72ac3166297eff08023_720w.jpg)
 
 
 

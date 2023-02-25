@@ -1972,7 +1972,7 @@ SpringBoot 在启动时会扫描外部引用 jar 包中的`META-INF/spring.facto
 
   - @SpringBootConfiguration （其内部是@Configuration，一个配置类，本质为配置文件，允许在 Spring 上下文中注册额外的 bean 或导入其他配置类）
   - @ComponentScan   （默认是开启扫描所在包下的所有类）
-  - **@EnableAutoConfiguration** **（开启自动配置）**
+  - **@EnableAutoConfiguration（开启自动配置）**
 - @EnableAutoConfiguration注解中有两个注解修饰，最重要的是这个注解有@Import(AutoConfigurationImportSelector.class)
 - @Import(AutoConfigurationImportSelector.class)这个注解有import注解，加载AutoConfigurationImportSelector（自动装配类）类。
   - 这个类中会获取AutoConfigurationEntry **自动配置入口，实现了所有的自动配置，并加载到IOC容器**
@@ -1985,12 +1985,12 @@ SpringBoot 在启动时会扫描外部引用 jar 包中的`META-INF/spring.facto
 
 ![img](https://p6-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/3c1200712655443ca4b38500d615bb70~tplv-k3u1fbpfcp-watermark.image)
 
-**怎样实现一个start？**
+**怎样实现一个starter？**
 
 - 首先创建一个`xxx--spring-boot-starter`工程
 - 导入spring boot相关依赖
 - 自定义自动配置类  autoconfigure
-- 在`xxxx-spring-boot-starter`工程的 resources 包下创建`META-INF/spring.factories`文件
+- 在`xxxx-spring-boot-starter`工程的 resources 包下创建`META-INF/spring.factories`文件，写下全类名这些信息
 - 最后在其他工程的pom文件中导入starter
   - 其他工程导入后，会扫描`xxx--spring-boot-starter`工程的`spring.factories`文件，从而得到类信息，通过Spring工厂加载器加载
 
@@ -2508,9 +2508,9 @@ Map<String,Object> map,  Model model, HttpServletRequest request   **都是可�
 private final ModelMap defaultModel = new BindingAwareModelMap();
 ```
 
-![image-20220111150023038](D:\我的坚果云\springBootImg\image-20220111150023038.png)
+![image-20220111150023038](springBootImg\image-20220111150023038.png)
 
-![image-20220111151138287](D:\我的坚果云\springBootImg\image-20220111151138287.png)
+![image-20220111151138287](springBootImg\image-20220111151138287.png)
 
 
 
@@ -2558,7 +2558,7 @@ mappedHandler = this.getHandler(processedRequest);
 HandlerAdapter ha = this.getHandlerAdapter(mappedHandler.getHandler());
 ```
 
-![image-20220111090834908](D:\我的坚果云\springBootImg\Image5.png)
+![image-20220111090834908](springBootImg\Image5.png)
 
 **HandlerAdapter**：
 
@@ -2596,7 +2596,7 @@ invokeHandlerMethod()中：
 
  **this.returnValueHandlers():返回值处理器**，即方法可以返回的返回值类型，Model ，view，或ModelAndView共15种
 
-![image-20220111092905515](D:\我的坚果云\springBootImg\image-20220111092905515.png)
+![image-20220111092905515]( springBootImg\image-20220111092905515.png)
 
 ##### 3.5.1 执行目标方法，获取目法的参数值
 
@@ -5101,11 +5101,11 @@ spring.profiles.group.mytest[0]=test
 
 ==**指定环境优先，外部优先，后面的可以覆盖前面的同名配置项**==
 
-#### 4，SpringBoot原理
+## 4，SpringBoot原理
 
 Spring原理【[Spring注解](https://www.bilibili.com/video/BV1gW411W7wy?p=1)】、**SpringMVC**原理、**自动配置原理**、SpringBoot原理
 
-##### 1，SpringBoot启动过程
+## ==1，SpringBoot启动过程==
 
 - 创建SpringBoot
 
@@ -5114,7 +5114,7 @@ Spring原理【[Spring注解](https://www.bilibili.com/video/BV1gW411W7wy?p=1)�
   - bootstrapRegistryInitializers：初始化启动引导器，**（**List<Bootstrapper>**）：去spring.factories文件中找** org.springframework.boot.**==Bootstrapper==**
   - 找==ApplicationContextInitializer==，**去spring.factories文件中找** 
     - List<ApplicationContextInitializer<?>> **initializers**
-  - 找==ApplicationListener==，应用监听器 ，去**spring.factories**找** **ApplicationListener**
+  - 找==ApplicationListener==，应用监听器 ，去**spring.factories**找ApplicationListener**
 
   - - - List<ApplicationListener<?>> **listeners**
 
@@ -5141,7 +5141,7 @@ Spring原理【[Spring注解](https://www.bilibili.com/video/BV1gW411W7wy?p=1)�
   - 准备环境prepareEnvironment（）设置环境信息
 
     - 返回或创建基础环境信息对象。ApplicationServletEnvironment
-    - 配置环境信息对象
+    - 配置环境信息对象      application.yml
       - 读取配置源的配置属性值
     - 绑定环境信息
     - **通知所有监听器listeners.environmentPrepared，当前环境准备完成**
