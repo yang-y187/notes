@@ -149,17 +149,35 @@ public class ChannelDemo1 {
 
 ### 2.2 ByteBuffer 结构
 
+ByteBuffer有三个重要属性变量
 
+- capacity
+- position
+- limit
 
+开始时，如图。
 
+![image-20230228085014774](Netty.assets/image-20230228085014774-16775454161721.png)
 
+**开始为写模式**，position为写入位置，limit等于capacity容量，下图表示写入了 4 个字节后的状态
 
+![image-20230228085159735](Netty.assets/image-20230228085159735-16775455224983.png)
 
+调用flip（）方法后，**ByteBuffer进行读模式**，position切换到起始位置，limit切换为读取限制
 
+![image-20230228085333539](Netty.assets/image-20230228085333539-16775456165775.png)
 
+读取 4 个字节后，状态
 
+![](Netty.assets/0020-16775456314898.png)
 
+调用clear()方法，重新进入读模式
 
+![image-20230228085415777](Netty.assets/image-20230228085415777-167754565707910.png)
+
+调用compact()方法，则是将未读完的数据向前压缩，然后切换至写模式。（clear()方法是直接全部清除，重新写入）
+
+![image-20230228085504992](Netty.assets/image-20230228085504992-167754570629912.png)
 
 
 
