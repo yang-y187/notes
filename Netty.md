@@ -42,7 +42,7 @@ buffer 则用来缓冲读写数据，常见的 buffer 有
 * DoubleBuffer
 * CharBuffer
 
-### 1.2 Selector
+### 1.2 Selector（选择器）
 
 
 
@@ -59,7 +59,7 @@ buffer 则用来缓冲读写数据，常见的 buffer 有
       end
       ```
 
-    - 多线程处理，每个线程处理一个连接
+    - 多线程处理，每个线程处理一个连接。（类似饭店吃饭，一名服务员会服务一个客人，多个客人就多名服务员）
 
     - ###### ==缺点==
 
@@ -79,15 +79,75 @@ buffer 则用来缓冲读写数据，常见的 buffer 有
       end
       ```
   
-    - 线程池为阻塞模式，即（一个线程完全处理完该链接才能处理下一个链接）
+      （类似，一名服务员服务客人，必须服务完该客人点餐吃饭走后，才能去服务其他人）
   
-    - 仅适合短链接的情况（会很快断开连接，以提高线程的使用率）
+    - ==缺点==
+  
+      - 线程池为**阻塞模式**，即（一个线程完全处理完该链接才能处理下一个链接）
+      - 仅适合短链接的情况（会很快断开连接，以提高线程的使用率）
+  
+  - ### Selector 版设计
+  
+    - selector的作用就是配合一个线程管理多个channel，获取这些channel上发送的事件，channel是处于非阻塞模式下，有事件时，selector会发现，交给线程处理。**适合连接数特别多，但流量低的场景（low traffic）**（如果流量高的情况，则多个channel都请求处理，则一个线程只能执行一个请求，所以不适用）
+  
+    - ```mermaid
+      graph TD
+      subgraph selector 版
+      thread --> selector
+      selector --> c1(channel)
+      selector --> c2(channel)
+      selector --> c3(channel)
+      end
+      ```
+  
+    - 调用 selector 的 select() 会阻塞直到 channel 发生了读写就绪事件，这些事件发生，select 方法就会返回这些事件交给 thread 来处理
 
 
 
+## 2，ByteBuffer
+
+###  2.1 ByteBuffer的正确使用
+
+```java
+@Slf4j
+public class ChannelDemo1 {
+    public static void main(String[] args) {
+        try (RandomAccessFile file = new RandomAccessFile("helloword/data.txt", "rw")) {
+            FileChannel channel = file.getChannel();
+            ByteBuffer buffer = ByteBuffer.allocate(10);
+            do {
+                // 向 buffer 写入
+                int len = channel.read(buffer);
+                log.debug("读到字节数：{}", len);
+                if (len == -1) {
+                    break;
+                }
+                // 切换 buffer 读模式
+                buffer.flip();
+                while(buffer.hasRemaining()) {
+                    log.debug("{}", (char)buffer.get());
+                }
+                // 切换 buffer 写模式
+                buffer.clear();
+            } while (true);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+```
 
 
 
+1. 读取文件的数据，向buffer中写入数据，例如调用 channel.read(buffer)
+2. 调用flip（）切换至读模式
+3. 从buffer读取数据，例如调用 buffer.get()
+4. 调用clear（）或者 compact() 切换至**写模式**
+5. 重复 1~4 步骤
+
+
+
+### 2.2 ByteBuffer 结构
 
 
 
