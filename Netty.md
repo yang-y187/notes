@@ -179,29 +179,112 @@ ByteBuffer有三个重要属性变量
 
 ![image-20230228085504992](Netty.assets/image-20230228085504992-167754570629912.png)
 
+**注意：compact（）方法是将未读完的数据全部向前迁移，例：[A,B,C,D],读模式下，读取[A,B]，调用compact（）方法迁移后，实际为[C,D,C,D]。但是写的位置是从数组[2]，即第二个C的位置开始操作，也就是会覆盖向前迁移后遗留下的byte**
 
 
 
+### 2.3 ByteBuffer 常见方法
+
+#### 分配空间
+
+- Bytebuffer buf = ByteBuffer.allocate(16);   class java.nio.HeapByteBuffer
+- ByteBuffer.allocateDirect(16)；                     class java.nio.DirectByteBuffer  
+
+两种方法属于不同的类，可以看出分别为堆内存和直接内存
+
+- HeapByteBuffer：使用java堆内存，读写效率低，会受到GC影响（GC情况下会产生停顿以及垃圾回收后，为减少内存碎片会进行内存数据的迁移，都会造成效率的底下）
+- DirectByteBuffer：使用系统的直接内存，读写效率高（因为首先是读数据到系统内存，然后再从系统内存到java管理的内存，而使用直接内存少了一次拷贝，效率必然高），不会受到GC的影响，分配效率低
+
+#### 向 buffer 写入数据
+
+- 调用 channel 的 read 方法
+- 调用 buffer 自己的 put 方法
+
+```java
+int readBytes = channel.read(buf);
+```
+
+和
+
+```java
+buf.put((byte)127);
+```
+
+#### 从 buffer 读取数据
+
+同样有两种办法
+
+* 调用 channel 的 write 方法
+* 调用 buffer 自己的 get 方法
+
+```java
+int writeBytes = channel.write(buf);
+```
+
+和
+
+```java
+byte b = buf.get();
+```
+
+get（）方法会使得position读指针后移，如果需要从头读取数据
+
+- 可以调用 rewind 方法将 position 重新置为 0
+- 或者调用 get(int i) 方法获取索引 i 的内容，**它不会移动读指针**
 
 
 
+#### mark 和 reset
 
+mark 是在读取时，做一个标记，即使 position 改变，只要调用 reset 就能回到 mark 的位置
 
+> **注意**
+>
+> rewind 和 flip 都会清除 mark 位置
 
+#### 字符串与 ByteBuffer 互转
 
+Charset会直接切换到读模式，而put方法不会
 
+```java
+buffer.put("hello".getBytes());
 
+ByteBuffer buffer1 = StandardCharsets.UTF_8.encode("你好");
+ByteBuffer buffer2 = Charset.forName("utf-8").encode("你好");
 
+debug(buffer1);
+debug(buffer2);
 
+CharBuffer buffer3 = StandardCharsets.UTF_8.decode(buffer1);
+System.out.println(buffer3.getClass());
+System.out.println(buffer3.toString());
+```
 
+#### ⚠️ Buffer 的线程安全
 
+> Buffer 是**非线程安全的**
 
+#### 2.4 Scattering Reads 分散读取
 
+```java
+try (RandomAccessFile file = new RandomAccessFile("helloword/3parts.txt", "rw")) {
+    FileChannel channel = file.getChannel();
+    ByteBuffer a = ByteBuffer.allocate(3);
+    ByteBuffer b = ByteBuffer.allocate(3);
+    ByteBuffer c = ByteBuffer.allocate(5);
+    channel.read(new ByteBuffer[]{a, b, c});
+    a.flip();
+    b.flip();
+    c.flip();
+    debug(a);
+    debug(b);
+    debug(c);
+} catch (IOException e) {
+    e.printStackTrace();
+}
+```
 
-
-
-
-
+## 3，文件编程
 
 
 
