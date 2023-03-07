@@ -12,4 +12,6 @@
 - [并发编程](https://github.com/yang-y187/notes/blob/main/%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B.md)
 - [商城项目](https://github.com/yang-y187/notes/blob/main/%E8%B0%B7%E7%B2%92%E5%95%86%E5%9F%8E.md)
 - [Kafka](https://github.com/yang-y187/notes/blob/main/Kafka.md)
-
+- [Elasticsearch](https://github.com/yang-y187/notes/blob/master/Elasticsearch.md)
+- [面试补充](https://github.com/yang-y187/notes/blob/master/%E5%A4%8D%E4%B9%A0.md)
+- [谷粒商城](https://github.com/yang-y187/notes/blob/master/%E8%B0%B7%E7%B2%92%E5%95%86%E5%9F%8E.md)
