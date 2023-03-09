@@ -572,6 +572,19 @@ cancel可以用在客户端取消连接后，服务器捕获到异常后，将�
   - selector检查channel上的可写事件，如果所有的数据写完了就取消channel的注册
   - 如果不取消，会每次可写均触发write事件
 
+## 5，NIO 和BIO
+
+### 5.1 stream 和channel
+
+- 不同点
+
+  - stream不能自动缓冲数据，channel会利用系统提供的发送缓冲区，接收缓冲区
+
+  - stream仅支持阻塞API（即调用方法会阻塞），channel阻塞API和非阻塞API均支持，网络channel可配合selector实现多路复用
+
+- 相同点：
+  - 二者均为全双工，即读写同时进行
+
 
 
 
