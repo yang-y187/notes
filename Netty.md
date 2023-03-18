@@ -595,21 +595,153 @@ cancel可以用在客户端取消连接后，服务器捕获到异常后，将�
 
 
 
+# 2，Netty入门
+
+## 1，了解Netty
+
+### 1.1 定义
+
+Netty是一个异步的，基于事件驱动的网络应用框架，用于快速开发可维护，高性能的网络服务器和客户端
 
 
 
+### 1.3 Netty 的地位
+
+涉及到java开发，凡是涉及到网络通信，都有Netty的影子。如同Spring在java中的地位
+
+### 1.4 Netty优势
+
+- Netty是基于NIO开发，直接使用NIO开发，工作量大，bug多
+  - 需要自己构建协议
+  - 解决TCP传输问题，如粘包，半包
+  - epoll 空轮询导致CPU100%
+  - 对API进行增强，使之更易用，
+- Netty vs 其他应用框架
+  - Netty开发迭代快，API更简洁，文档更优秀
+  - netty已经出版将近20年，稳定性强
 
 
 
+## 2 hello world
+
+客户端向服务器发送hello，world
+
+### 服务器端
+
+```java
+// 1 启动服务器，组装netty组件
+new ServerBootstrap()
+    // 2 绑定selector和线程 分组
+    .group(new NioEventLoopGroup()) // 1
+    // 3 选择服务器的实现类
+    .channel(NioServerSocketChannel.class) // 2
+    // 4 handler 处理器 负责处理哪些读写
+    .childHandler(  //3
+    // 5 channel 代表和客户端进行数据读写的通道初始化，
+    new ChannelInitializer<NioSocketChannel>() {
+        @Override
+        protected void initChannel(NioSocketChannel nioSocketChannel) throws Exception {
+            // 添加具体的handler
+            nioSocketChannel.pipeline().addLast(new StringDecoder()); //4
+            nioSocketChannel.pipeline().addLast(new ChannelInboundHandlerAdapter() { // 5
+                @Override
+                // 读事件
+                public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                    System.out.println(msg);
+                }
+            });
+        }
+    }
+)
+    .bind(8080); //6
+```
+
+1. 创建NioEventLoopGroup， 选择线程池和seletor
+2. 选择服务socket实现类，其中NioserverSocketChannel 表示基于NIO的服务器端实现，其他实现还有![image-20230318131538993](Netty.assets/image-20230318131538993.png)
+3. handler ，添加处理器给socketChannel调用，而ChannelInitializer 处理器（仅执行一次），它的作用是待客户端SocketChannel 建立连接后，执行initChannel 添加更多的处理器
+4. SocketChannel 的处理器，解码 ByteBuf => String
+5. SocketChannel 的业务处理器，使用上一个处理器的处理结果
+6. 绑定端口
+
+### 客户端
+
+```java
+// 1 启动类
+new Bootstrap()
+    // 2 增加Eventloop
+    .group(new NioEventLoopGroup()) // 1
+    // 3 选择客户端 channel 实现
+    .channel(NioSocketChannel.class) // 2
+    // 4 添加处理器
+    .handler(new ChannelInitializer<Channel>() { // 3
+
+        @Override // 在连接建立后被调用
+        protected void initChannel(Channel channel){
+            channel.pipeline().addLast(new StringEncoder());  //8
+        }
+    })
+    // 5 连接到服务器
+    .connect("127.0.0.1", 8080) //4
+    .sync()  //5
+    .channel() // 6
+    // 6 向服务器发送数据
+    .writeAndFlush("hello, world");  7
+```
+
+1. 创建NioEventLoopGroup 
+
+2. 选择客户Socket 实现类，NioSocketChannel 表示基于NIO的客户端实现，还有![image-20230318132402174](Netty.assets/image-20230318132402174.png)
+
+3. 与server相同
+
+4. 指定要连接的服务器和端口
+
+5. Netty 调用sync，异步等待connet建立连接
+
+6. 获取channel对象，通过channel进行数据读写
+
+7. 写入数据并清空缓冲区
+
+8.  消息会经过通道handler 处理，此处是将String->ByteBuf
+
+   数据通过网络传输，到达服务器，服务器端5,6,的handler先后被触发（将byteBuf转换为string，再调用handler处理）
+
+### 流程梳理
+
+![image-20230318151417725](Netty.assets/image-20230318151417725.png)
+
+首先创建server服务器，创建客户端，然后连接客户端，然后再执行服务器的channel初始化方法，再执行客户端的channel初始化方法，客户端发送数据，，客户端会将数据进行处理，将string转换为bytebuf，服务器收到数据也是将bytebuf转换成string，然后再执行数据的处理操作
 
 
 
+- channel：数据的传输通道
+- msg为流动的数据，流入通道为byteBuf，经过pipeline加工，会变成其他类型对象，最后输出又变成ByteBuf
+- handler为数据处理适配器
+  - pipeline，负责发布事件，传播给每个handler，handler对自己负责的事情进行处理（会重新对应事件的处理方法）
+  - 即pipeline发布对通道channel的处理操作
+- 把eventloop理解为处理数据的seletor
+  - eventloop负责多个channel的io操作，一旦绑定了该channel，则需要一直负责
+  - eventloop 还可以执行任务处理，都有任务队列，可以放多个channel的任务，任务可以是普通任务和定时任务
+  - eventloop按照pipeline顺序，依次按照handler的规划处理数据
+
+## 3 组件
+
+### 3.1 Eventloop
+
+Eventloop 本质上是一个单线程的执行器（同时维护了一个seletor），里面有run方法处理channel上的IO事件
+
+它的继承关系比较复杂
+
+* 一条线是继承自 j.u.c.ScheduledExecutorService 因此包含了线程池中所有的方法
+* 另一条线是继承自 netty 自己的 OrderedEventExecutor，
+  * 提供了 boolean inEventLoop(Thread thread) 方法判断一个线程是否属于此 EventLoop
+  * 提供了 parent 方法来看看自己属于哪个 EventLoopGroup
 
 
 
+EventloopGroup 是一组EventLoop，channel一般会调用EventLoopGroup的register方法绑定其中一个EventLoop，后续该channel的IO事件由EventLoop来处理（保证了IO事件处理时的线程安全，因为只有该eventLoop处理该事件）
 
-
-
+可遍历EventLoopGroup
 
 
 
