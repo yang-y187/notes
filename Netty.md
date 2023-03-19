@@ -823,7 +823,7 @@ static void invokeChannelRead(final AbstractChannelHandlerContext next, Object m
 
 
 
-## 3.2 channel
+### 3.2 channel
 
 channel主要用于传输数据
 
@@ -880,6 +880,384 @@ channelFuture.addListener((ChannelFutureListener) future -> {
     System.out.println(future.channel()); // 2
 });
 ```
+
+
+
+### 异步提升的是什么
+
+* 有些同学看到这里会有疑问：为什么不在一个线程中去执行建立连接、去执行关闭 channel，那样不是也可以吗？非要用这么复杂的异步方式：比如一个线程发起建立连接，另一个线程去真正建立连接
+
+* 还有同学会笼统地回答，因为 netty 异步方式用了多线程、多线程就效率高。其实这些认识都比较片面，多线程和异步所提升的效率并不是所认为的
+
+
+
+- 单线程没办法异步提高效率，必须配合多线程，多核CPU才能发挥异步的优势
+- 异步并没有缩短相应时间，反而因为线程间的切换增加了时间消耗，但异步情况下，增加了整体的吞吐量（因为多线程并行执行，没有阻塞）
+- 合理进行执行任务拆分，进行解耦
+
+### 3.3 Future & Promise
+
+异步处理时的两个接口。
+
+Promise继承了netty.Future，netty.Future继承了jdk的Future
+
+- jdk Future只能同步等待任务结束才能得到的结构
+- netty.Future 可以同步等待任务结束得到的结果，也可以异步方式得到结构，但要等到如未能结束
+- netty.Promise继承了netty.Future，并脱离了任务独立存在，作为两个线程间传递结果的容器
+
+| 功能/名称    | jdk Future                     | netty Future                                                 | Promise      |
+| ------------ | ------------------------------ | ------------------------------------------------------------ | ------------ |
+| cancel       | 取消任务                       | -                                                            | -            |
+| isCanceled   | 任务是否取消                   | -                                                            | -            |
+| isDone       | 任务是否完成，不能区分成功失败 | -                                                            | -            |
+| get          | 获取任务结果，阻塞等待         | -                                                            | -            |
+| getNow       | -                              | 获取任务结果，非阻塞，还未产生结果时返回 null                | -            |
+| await        | -                              | 等待任务结束，如果任务失败，不会抛异常，而是通过 isSuccess 判断 | -            |
+| sync         | -                              | 等待任务结束，如果任务失败，抛出异常                         | -            |
+| isSuccess    | -                              | 判断任务是否成功                                             | -            |
+| cause        | -                              | 获取失败信息，非阻塞，如果没有失败，返回null                 | -            |
+| addLinstener | -                              | 添加回调，异步接收结果                                       | -            |
+| setSuccess   | -                              | -                                                            | 设置成功结果 |
+| setFailure   | -                              | -                                                            | 设置失败结果 |
+
+
+
+### 3.4 Handler & Pipeline
+
+handler用来处理channel上的事件，分为入站和出站两种，而所有的handler连接在一串就是pipeline。
+
+- 入站处理器就是channelInboundHandlerAdapter的子类，读取客户端传来的数据，写回结果
+- 出站处理器就是channelOutBoundHandlerAdapter的子类，对写回的结果进行加工
+
+
+
+channel.pipeline().addLast() 增加handler处理器。**ChannelInboundHandlerAdapter 是按照 addLast 的顺序执行的，而 ChannelOutboundHandlerAdapter 是按照 addLast 的逆序执行的。**ChannelPipeLine的实现是一个ChannelHandlerContext（包装了ChannelHandler）组成的双向链表
+
+![image-20230319170753925](Netty.assets/image-20230319170753925.png)
+
+入站处理器为执行下一个入站处理器的方法，需要调用（ChannelHandlerContext）ctx.fireChannelRead(msg) 方法或者super.fireChannelRead(msg)，否则双向链表断裂。
+
+
+
+super.fileChannelRead=>（ChannelHandlerContext）ctx.channel.fireChannelRead(msg)
+
+因此，入站处理器中，调用ctx或者super都是从双向链表的当前位置向后遍历，找到下一个入站处理器。
+
+出站处理器中，ctx是从双向链表的当前位置向前遍历，找到下一个出站处理器，super则是从channel整个pipeline中倒序遍历找到下一个出站处理器。
+
+
+
+图1 - 服务端 pipeline 触发的原始流程，图中数字代表了处理步骤的先后次序
+
+![image-20230319172618052](Netty.assets/image-20230319172618052.png)
+
+
+
+### 3.5 ByteBuf
+
+对字节数据的封装
+
+- ### 创建
+
+  - ByteBuf buffer = ByteBufAllocator.DEFAULT.buffer(10); 
+  - 基于直接内存创建对象
+
+- ### 直接内存 和堆内存
+
+  - 创建池化基于堆内存的ByteBuf
+    - ByteBuf buffer = ByteBufAllocator.DEFAULT.heapBuffer(10);
+  - 创建池化基于直接内存的ByteBuf
+    - ByteBuf buffer = ByteBufAllocator.DEFAULT.directBuffer(10);
+  - 直接内存创建和销毁的代价昂贵，但读写性能高（因为减少了用户态与内核态的转换，以及数据的复制）
+  - 直接内存不涉及GC，而堆内存会受到jvm的GC影响，stop the world和内存数据迁移的问题
+
+- ### 池化 vs 非池化
+
+  - 池化可以重用ByteBuf，
+    - 没有池化时，每次都需要创建新的ByteBuf，无论是在直接内存还是堆内存都消耗性能
+    - 池化操作，重用池中的ByteBuf实例，并采用jemalloc类似的内存分配算法提升效率
+    - 高并发时，池化功能更解约内存，减少内存溢出的可能
+  - 默认开启ByteBuf的池化操作，但Android使用非池化。
+
+- ### 组成
+
+  - ![image-20230319201544322](Netty.assets/image-20230319201544322.png)
+  - 开始时，读写指针都在0位置
+
+- ### 写入
+
+  - | 方法签名                                                     | 含义                   | 备注                                                    |
+    | ------------------------------------------------------------ | ---------------------- | ------------------------------------------------------- |
+    | writeBoolean(boolean value)                                  | 写入 boolean 值        | 用一字节 01\|00 代表 true\|false                        |
+    | writeByte(int value)                                         | 写入 byte 值           |                                                         |
+    | writeShort(int value)                                        | 写入 short 值          |                                                         |
+    | writeInt(int value)                                          | 写入 int 值            | （高位写入）Big Endian，即 0x250，写入后 00 00 02 50    |
+    | writeIntLE(int value)                                        | 写入 int 值            | （低位写入）Little Endian，即 0x250，写入后 50 02 00 00 |
+    | writeLong(long value)                                        | 写入 long 值           |                                                         |
+    | writeChar(int value)                                         | 写入 char 值           |                                                         |
+    | writeFloat(float value)                                      | 写入 float 值          |                                                         |
+    | writeDouble(double value)                                    | 写入 double 值         |                                                         |
+    | writeBytes(ByteBuf src)                                      | 写入 netty 的 ByteBuf  |                                                         |
+    | writeBytes(byte[] src)                                       | 写入 byte[]            |                                                         |
+    | writeBytes(ByteBuffer src)                                   | 写入 nio 的 ByteBuffer |                                                         |
+    | int writeCharSequence(CharSequence sequence, Charset charset) | 写入字符串             |                                                         |
+
+  - > 注意
+    >
+    > * 这些方法的未指明返回值的，其返回值都是 ByteBuf，意味着可以链式调用
+    > * 网络传输，默认习惯是 Big Endian
+
+- ### 扩容
+
+  - 写入数据，容量不足时，触发扩容。初始容量为10
+  - 扩容规则是
+    - 若写入后的数据未超过512，则选择16的整数倍
+    - 若写入后的数据超过512，则为2^n
+    - 扩容不能超过max capacity 否则会报错
+
+- ### retain & release
+
+  - **ByteBuf的特殊性，pipeline链式handler处理数据，若当前handler处理完byteBuf，可能后续的handler也会调用ByteBuf，因此不能直接回收，**
+
+  - 内存回收，由于Netty中有堆内存和直接内存不同的实现，直接内存选择手动回收
+
+    - 未池化的堆内存ByteBuf，使用jvm内存，等待GC回收
+    - 未池化的直接内存ByteBuf，手动回收
+    - 池化的ByteBuf和它的子类，需要更复杂的回收方式
+
+  - > 回收内存的源码实现，请关注下面方法的不同实现
+    >
+    > `protected abstract void deallocate()`
+
+  - Netty采用**引用计数法**进行回收，每个 ByteBuf 都实现了 ReferenceCounted 接口
+
+    - 调用release方法，计数减一
+    - 调用retain方法，计数加一，表示调用者还没处理结束，其他handler调用了release也不会回收
+    - 计数为0，底层内存回收，即使ByteBuf对象存在，则各个方法均无法正常使用
+
+  - 基于ByteBuf的特殊性，基本规则是**谁是最后使用者，谁负责release**，pipeline如下所示，出入站，head和tail分别是出站处理器和入站处理器，实现了对应类，可释放bytebuf消息
+
+    - ![image-20230319204422200](Netty.assets/image-20230319204422200.png)
+    - 入站ByteBuf处理原则
+      - 对原始ByteBuf不做处理，调用fireChannelRead（msg）向后传递，不必release
+      - 将原始的ByteBuf，转换为其他类型对象，则必须release
+      - 若不调用fireChannelRead（msg），不再向后传递，必须release
+      - 注意异常处理，出现异常情况导致没能传递到下一个handler，必须release
+      - 若消息一直往后传，则tailContext会释放未处理的消息。
+    - 出站ByteBuf处理原则
+      - 出站消息最终都会转为 ByteBuf 输出，一直向前传，由 HeadContext flush 后 release
+    - 异常处理原则
+      * 有时候不清楚 ByteBuf 被引用了多少次，但又必须彻底释放，可以循环调用 release 直到返回 true
+
+- ### 零拷贝的体现
+
+  - #### slice 切片
+
+    - 对原始ByteBuf进行切片分为多个ByteBuf，切片后的ByteBuf本质上没有发生内存复制，即还是使用原始的ByteBuf内存，但切片后的ByteBuf会维护独立的read，write指针。切片后的ByteBuf不能添加数据，因为会造成后续的ByteBuf的位置迁移
+    - ![image-20230319210920329](Netty.assets/image-20230319210920329.png)
+
+  - #### duplicate
+
+    - 截取了原始ByteBuf的所有内容，并且没有max capacity的限制，但和原始ByteBuf使用同一块底层内存，但读写指针独立
+
+  - #### CompositeByteBuf
+
+    - 将多个ByteBuf合并为一个逻辑上的ByteBuf，避免了内存拷贝
+
+    - CompositeByteBuf 是一个组合的 ByteBuf，它内部维护了一个 Component 数组，每个 Component 管理一个 ByteBuf，记录了这个 ByteBuf 相对于整体偏移量等信息，代表着整体中某一段的数据。
+
+      * 优点，对外是一个虚拟视图，组合这些 ByteBuf 不会产生内存复制
+      * 缺点，复杂了很多，多次操作会带来性能的损耗
+
+      
+
+- ### copy
+
+  - 对bytebuf进行拷贝，与原始ByteBuf无关
+
+
+
+#### 💡 ByteBuf 优势
+
+* 池化 - 可以重用池中 ByteBuf 实例，更节约内存，减少内存溢出的可能
+* 读写指针分离，不需要像 ByteBuffer 一样切换读写模式
+* 可以自动扩容
+* 支持链式调用，使用更流畅
+* 很多地方体现零拷贝，例如 slice、duplicate、CompositeByteBuf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
