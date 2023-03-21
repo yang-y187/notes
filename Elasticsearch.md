@@ -345,6 +345,8 @@ POST /_aliases
 
 # 4，入门操作
 
+## ES操作
+
 - ### 创建索引
 
   - put：http://127.0.0.1:9200/shopping 
@@ -443,7 +445,168 @@ POST /_aliases
       }
       ```
 
-      
+  - Incldes：指定想要的字段
 
+  - excludes：指定不想要的字段
   
+    - ```json
+      {
+       "_source": {
+       "includes": ["name","nickname"]
+       },
+       "query": {
+       "terms": {
+       "nickname": ["zhangsan"]
+       }
+       }
+      }
+      ```
+    
+  - 组合查询
+  
+    - must
+    
+    - must_not
+    
+    - should
+    
+      
+    
+  - 范围查询range
+  
+    - gt >
+    - gte >=
+    - lt <
+    - lte <=
+  
+  - 模糊查询
+  
+    - **返回包含与搜索字词相近的字词的文档**，不是同一个词，注意区分
+    - 编辑距离距离是将一个词语转换成另一个术语所需的一个字符更改的次数
+  
+  - 单字段排序
+  
+    - desc 降序，asc 升序
+  
+  - 分页查询
+  
+    - from：当前页的起始索引，默认从0开始，from=（pageNum-1）*size
+    - size：每页的条数
+  
+  - State 聚合 一次性返回指定字段的count，max，min，avg，sum五个指标
+  
+
+
+
+## java操作
+
+- 创建esclient对象，指定链接和端口
+- 根据index创建request请求，添加条件，构建request
+- 操作，并处理返回结果Response
+
+
+
+```java
+SearchRequest request = new SearchRequest();
+request.indices("student");
+
+SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
+// 查询所有数据
+sourceBuilder.query(QueryBuilders.matchAllQuery());
+request.source(sourceBuilder);
+SearchResponse response = client.search(request, RequestOptions.DEFAULT);
+// 查询匹配
+SearchHits hits = response.getHits();
+```
+
+
+
+- ### 高级查询
+
+  - 查询所有数据：
+
+    ```java
+    sourceBuilder.query(QueryBuilders.matchAllQuery());
+    ```
+
+  - term精确查询：
+
+    ```java
+    sourceBuilder.query(QueryBuilders.termQuery("age", "30"));
+    ```
+
+  - 分页查询：
+
+    ```java
+    // 当前页其实索引(第一条数据的顺序号)，from
+    sourceBuilder.from(0);
+    // 每页显示多少条 size
+    sourceBuilder.size(2);
+    ```
+
+  - 数据排序
+
+    ```java
+    // 排序
+    sourceBuilder.sort("age", SortOrder.ASC);
+    ```
+
+  - 查询字段过滤
+
+    ```java
+    String[] excludes = {};
+    String[] includes = {"name", "age"};
+    sourceBuilder.fetchSource(includes, excludes);
+    ```
+
+  - bool查询（**组合查询**）
+
+    ```java
+    // 必须包含
+    boolQueryBuilder.must(QueryBuilders.matchQuery("age", "30"));
+    // 一定不含
+    boolQueryBuilder.mustNot(QueryBuilders.matchQuery("name", "zhangsan"));
+    // 可能包含
+    boolQueryBuilder.should(QueryBuilders.matchQuery("sex", "男"));
+    ```
+
+  - 范围查询
+
+    ```java
+    RangeQueryBuilder rangeQuery = QueryBuilders.rangeQuery("age");
+    // 大于等于
+    rangeQuery.gte("30");
+    // 小于等于
+    rangeQuery.lte("40");
+    ```
+
+  - **组合查询**
+
+    - QueryBuilders.matchQuery(“supplierName”,param)：首先对搜索的字段进行分词，分词中的任一词与ES中的目标字段匹配上即可。即**分词后精确查询，分词之间or关系,有一个分词匹配即匹配**
+    - QueryBuilders.matchPhraseQuery(“supplierName”,param)：与matchQuery不同的是，分词后精确查询，分词之间是and关系，必须全部匹配才可
+    - QueryBuilders.matchPhrasePrefixQuery(“supplierName”,param) ：与matchPhraseQuery相似，但查询条件的最后一个分词可以前缀匹配
+    - QueryBuilders.termQuery(“supplierName”,param)：精确查询，不会对查询内容分词
+    - QueryBuilders.wildcardQuery(“supplierName”,"\*"+param+"*") : 模糊查询，注意查询字段需要前后\*符号。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
