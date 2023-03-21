@@ -343,7 +343,7 @@ POST /_aliases
 
 8. 有聚合操做的核心索引，建议根据实际情况配置慢日志；
 
-# 4， 入门操作
+# 4，入门操作
 
 - ### 创建索引
 
@@ -358,3 +358,92 @@ POST /_aliases
 - ### 删除索引
 
   - delete：http://127.0.0.1:9200/shopping 
+
+
+
+- ### 创建文档
+
+  - post：http://127.0.0.1:9200/shopping/_doc
+  - **为什么是post请求，而不是put请求？**
+    - **因为put请求要求是幂等性的， ES添加文档时不是幂等的（会生成自定义唯一标识）所以选择post请求发送，若指定了唯一标识，put和post请求均可。（post请求没有幂等性的要求）**
+  - 指定自定义唯一标识ID
+  - put/post： http://127.0.0.1:9200/shopping/_doc/1
+
+- ### 查询文档
+
+  - GET：http://127.0.0.1:9200/shopping/_doc/1
+
+- ### 修改文档
+
+  - post：http://127.0.0.1:9200/shopping/_doc/1
+
+- ### 修改字段
+
+  - post：http://127.0.0.1:9200/shopping/_update/1
+
+    ```json
+    {
+    "doc": {
+    "price":3000.00
+    }
+    }
+    ```
+
+- ### 删除文档
+
+  - delete：http://127.0.0.1:9200/shopping/_doc/1
+
+- ### 查询文档
+
+  - 查询结果
+
+  - ```json
+    {
+    	"took【查询花费时间，单位毫秒】": 1116,
+    	"timed_out【是否超时】": false,
+    	"_shards【分片信息】": {
+    		"total【总数】": 1,
+    		"successful【成功】": 1,
+    		"skipped【忽略】": 0,
+    		"failed【失败】": 0
+    	},
+    	"hits【搜索命中结果】": {
+    		"total"【
+    		搜索条件匹配的文档总数】: {
+    			"value"【
+    			总命中计数的值】: 3,
+    			"relation"【
+    			计数规则】: "eq"#
+    			eq 表示计数准确， gte 表示计数不准确
+    		},
+    		"max_score【匹配度分值】": 1.0,
+    		"hits【命中结果集合】": [。。。
+    		}
+    	]
+    }
+    }
+    ```
+
+  - match：匹配内容查询，会对**查询条件**分词，多词条之间采用or
+
+  - term：精确查询，不对查询条件分词
+
+  - terms：多关键字精确查询，该字段包含了指定值中的其中一个
+
+  - 指定查询的返回字段
+
+    - ```json
+      {
+      	"_source": ["name", "nickname"],
+      	"query": {
+      		"terms": {
+      			"nickname": ["zhangsan"]
+      		}
+      	}
+      }
+      ```
+
+      
+
+  
+
