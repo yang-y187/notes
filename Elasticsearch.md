@@ -395,6 +395,42 @@ POST /_aliases
 
   - delete：http://127.0.0.1:9200/shopping/_doc/1
 
+- ### 映射条件
+
+  - 指定映射条件，
+
+  - put：http://127.0.0.1:9200/student1
+
+    - ```json
+      {
+          "settings":{
+      
+          },
+          "mappings":{
+              "properties":{
+                  "name":{
+                      "type":"text",
+                      "index":true
+                  },
+                  "sex":{
+                      "type":"keyword",
+                      "index":true
+                  },
+                  "age":{
+                      "type":"long",
+                      "index":false
+                  }
+              }
+          }
+      }
+      ```
+
+    - :star2:： ==**若index为false，不能作为搜索条件。**==
+
+    - :star2:： ==**若类型type为“keyword”，即表示则表明该字段不创建倒排索引，搜索的时候需要全值匹配。match不能对该字段分词。即与term相似。**==
+
+      
+
 - ### 查询文档
 
   - 查询结果
@@ -448,7 +484,7 @@ POST /_aliases
   - Incldes：指定想要的字段
 
   - excludes：指定不想要的字段
-  
+
     - ```json
       {
        "_source": {
@@ -463,7 +499,7 @@ POST /_aliases
       ```
     
   - 组合查询
-  
+
     - must
     
     - must_not
@@ -473,28 +509,28 @@ POST /_aliases
       
     
   - 范围查询range
-  
+
     - gt >
     - gte >=
     - lt <
     - lte <=
-  
+
   - 模糊查询
-  
+
     - **返回包含与搜索字词相近的字词的文档**，不是同一个词，注意区分
     - 编辑距离距离是将一个词语转换成另一个术语所需的一个字符更改的次数
-  
+
   - 单字段排序
-  
+
     - desc 降序，asc 升序
-  
+
   - 分页查询
-  
+
     - from：当前页的起始索引，默认从0开始，from=（pageNum-1）*size
     - size：每页的条数
-  
+
   - State 聚合 一次性返回指定字段的count，max，min，avg，sum五个指标
-  
+
 
 
 
