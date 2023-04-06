@@ -336,7 +336,7 @@ FST- Finite State Transducers （有限状态转换器）
 
 ![6.png](Elasticsearch.assets/d5cc0f1294d94f44a44ecad98519b091.png)
 
-# 3，实践
+# 3，实践（ 基本略）
 
 ## 3.1 创建索引
 
