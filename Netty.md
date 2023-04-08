@@ -1257,35 +1257,128 @@ Netty是多线程处理消息，那编解码器，日志handler等对象是否�
 
 **服务器解决**
 
-- 
+- **心跳机制**
+- 客户端定时向服务器发送空包数据，只要这个时间间隔小于服务器定义的空闲检测的时间间隔，那么就能防止前面提到的误判。
+
+
+
+# 4，Netty 优化与算法
+
+## 1，优化
+
+### 1.1 扩展序列化算法（略）
+
+通过netty进行网络编程，可以指定多种序列化方法。来表明netty的方便
+
+- JDK自带序列化方法：实现serialize接口
+  - 会将类信息也进行序列化，反序列时，不必指定类型，但占用字节多，性能慢，仅限于java语言
+- JSON：占用空间少，跨语言使用，方便，但需要指定类型
+
+
+
+### 1.2 参数调优
+
+#### 1）CONNECT_TIMEOUT_MILLIS
+
+- 属于SocketChannel参数
+- 在客户端连接时，若指定毫秒没无法连接，则抛出异常。可指定超时时间
+- SO_TIMEOUT 主要用在阻塞 IO，阻塞 IO 中 accept，read 等都是无限等待的，如果不希望永远阻塞，使用它调整超时时间
+
+
+
+另外源码部分 `io.netty.channel.nio.AbstractNioChannel.AbstractNioUnsafe#connect`
+
+```java
+@Override
+public final void connect(
+        final SocketAddress remoteAddress, final SocketAddress localAddress, final ChannelPromise promise) {
+    // ...
+    // Schedule connect timeout.
+    int connectTimeoutMillis = config().getConnectTimeoutMillis();
+    if (connectTimeoutMillis > 0) {
+        connectTimeoutFuture = eventLoop().schedule(new Runnable() {
+            @Override
+            public void run() {                
+                ChannelPromise connectPromise = AbstractNioChannel.this.connectPromise;
+                ConnectTimeoutException cause =
+                    new ConnectTimeoutException("connection timed out: " + remoteAddress); // 断点2
+                if (connectPromise != null && connectPromise.tryFailure(cause)) {
+                    close(voidPromise());
+                }
+            }
+        }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
+    }
+	// ...
+}
+```
+
+#### 2）SO_BACKLOG
+
+```mermaid
+sequenceDiagram
+
+participant c as client
+participant s as server
+participant sq as syns queue
+participant aq as accept queue
+
+s ->> s : bind()
+s ->> s : listen()
+c ->> c : connect()
+c ->> s : 1. SYN
+Note left of c : SYN_SEND
+s ->> sq : put
+Note right of s : SYN_RCVD
+s ->> c : 2. SYN + ACK
+Note left of c : ESTABLISHED
+c ->> s : 3. ACK
+sq ->> aq : put
+Note right of s : ESTABLISHED
+aq -->> s : 
+s ->> s : accept()
+```
+
+上述为tcp三次握手，
+
+* 在 linux 2.2 之前，backlog 大小包括了两个队列的大小，在 2.2 之后，分别用下面两个参数来控制
+
+* sync queue - 半连接队列
+  * 大小通过 /proc/sys/net/ipv4/tcp_max_syn_backlog 指定，在 `syncookies` 启用的情况下，逻辑上没有最大值限制，这个设置便被忽略
+* accept queue - 全连接队列
+  * 其大小通过 /proc/sys/net/core/somaxconn 指定，在使用 listen 函数时，内核会根据传入的 backlog 参数与系统参数，取二者的较小值
+  * 如果 accpet queue 队列满了，server 将发送一个拒绝连接的错误信息到 client
+
+netty 中
+
+可以通过  option(ChannelOption.SO_BACKLOG, 值) 来设置大小
+
+
+
+#### 3）ulimit -n
+
+* 属于操作系统参数，文件描述符的个数，即打开文件的数量
 
 
 
 
 
+#### 5）SO_SNDBUF & SO_RCVBUF
 
+- 发送缓冲区和接收缓冲区大小，不用碰
 
+* SO_SNDBUF 属于 SocketChannal 参数
+* SO_RCVBUF 既可用于 SocketChannal 参数，也可以用于 ServerSocketChannal 参数（建议设置到 ServerSocketChannal 上）
 
+#### 6）ALLOCATOR
 
+* 属于 SocketChannal 参数
+* 用来分配 ByteBuf， ctx.alloc()
 
+#### 7）RCVBUF_ALLOCATOR
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+* 属于 SocketChannal 参数
+* 控制 netty 接收缓冲区大小
+* 负责入站数据的分配，决定入站缓冲区的大小（并可动态调整），统一采用 direct 直接内存，具体池化还是非池化由 allocator 决定
 
 
 
