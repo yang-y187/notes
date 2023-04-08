@@ -1087,6 +1087,17 @@ super.fileChannelRead=>（ChannelHandlerContext）ctx.channel.fireChannelRead(ms
 
 
 
+# 3，Netty 进阶
+
+## 1，粘包，半包
+
+### 1.1 粘包
+
+- 粘包：
+  - 
+
+半包：收到的是不足一条数据，0.5，0.7条数据。
+
 
 
 
