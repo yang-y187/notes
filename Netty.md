@@ -1091,40 +1091,173 @@ super.fileChannelRead=>（ChannelHandlerContext）ctx.channel.fireChannelRead(ms
 
 ## 1，粘包，半包
 
-### 1.1 粘包
-
 - 粘包：
-  - 
+  - 发送123，456，接收到123456
+  - 原因
+    - 应用层：接收方ByteBuf设置太大（Netty默认1024）
+    - TCP滑动窗口：发送方发送一个完成报文，而接收方处理不及时，且窗口容量足够大，则这报文就会缓存在 滑动窗口中，若缓存多个，则造成粘包
+    - Nagle算法：（为避免发送少量数据时，http请求头和TCP请求头过于占用流量，Nagle会对数据进行累积，再统一发送）也会造成粘包。
 
-半包：收到的是不足一条数据，0.5，0.7条数据。
+- 半包
+  - 发送 123456，接收到123，456
+  - 原因：
+    - 应用层：接收方ByteBuf小于实际发送的数量
+    - 滑动 窗口：滑动窗口过小，接收方的容量不足以容纳完整报文，则造成半包
+    - MSS限制：发送的数据超过了MSS限制，会将数据进行切分发送。MSS限制，不同网络设备会对发送数据包的大小有限制
 
-
-
-
-
-
-
-
-
-
-
-
-
+粘包半包的主要原因就是TCP发送数据，是没有边界的。
 
 
 
+Nagle 算法
+
+* 即使发送一个字节，也需要加入 tcp 头和 ip 头，也就是总字节数会使用 41 bytes，非常不经济。因此为了提高网络利用率，tcp 希望尽可能发送足够大的数据，这就是 Nagle 算法产生的缘由
+* 该算法是指发送端即使还有应该发送的数据，但如果这部分数据很少的话，则进行延迟发送
+  * 如果 SO_SNDBUF 的数据达到 MSS，则需要发送
+  * 如果 SO_SNDBUF 中含有 FIN（表示需要连接关闭）这时将剩余数据发送，再关闭
+  * 如果 TCP_NODELAY = true，则需要发送
+  * 已发送的数据都收到 ack 时，则需要发送
+  * 上述条件不满足，但发生超时（一般为 200ms）则需要发送
+  * 除上述情况，延迟发送
 
 
 
+MSS 限制
+
+* 链路层对一次能够发送的最大数据有限制，这个限制称之为 MTU（maximum transmission unit），不同的链路设备的 MTU 值也有所不同，例如
+
+ * 以太网的 MTU 是 1500
+ * FDDI（光纤分布式数据接口）的 MTU 是 4352
+ * 本地回环地址的 MTU 是 65535 - 本地测试不走网卡
+
+* MSS 是最大段长度（maximum segment size），它是 MTU 刨去 tcp 头和 ip 头后剩余能够作为数据传输的字节数
+
+ * ipv4 tcp 头占用 20 bytes，ip 头占用 20 bytes，因此以太网 MSS 的值为 1500 - 40 = 1460
+ * TCP 在传递大量数据时，会按照 MSS 大小将数据进行分割发送
+ * MSS 的值在三次握手时通知对方自己 MSS 的值，然后在两者之间选择一个小值作为 MSS
+
+![image-20230408092935835](Netty.assets/image-20230408092935835.png)
+
+==**解决方案**==
+
+1. 短链接，发送每个包都建立一次连接，连接的建立和断开，则是消息的边界，粘包问题可以解决，但半包问题仍存在（即发送方的数据过大，超过了接收方单次接收消息容量），而且每次发送消息都建立连接，效率低下。
+2. 每条消息固定长度，缺点：长度过大，浪费空间，过小，不足以容纳所有消息
+3. 每条消息采用分隔符，缺点：效率低，需要转义（实质是检测每个字节，判断是否为分隔符，因此效率低）。
+4. 每条消息分为head和body（请求头和请求体），head中包含body的长度
+   - 请求体的偏移量（即起始位置）
+   - 长度本身占用的字节数
+   - 长度调整：（除长度字段和内容外，可能传送其他字段信息，需要指定该变量。表示长度之后，再加上几个字节才是内容数据）
+   - 从头剥离几个字节（只读取内容，不读取长度信息，可指定剥离head 信息）
+
+## 2，协议涉及和解析
+
+### 2.1 为什么需要协议
+
+TCP/IP传输基于流的方式，没有边界。
+
+协议的目的是指定消息的边界，指定通信共同遵守的通信规则
+
+常用的的协议：定长字节表示数据长度+实际数据
+
+### 2.2 自定义协议要素
+
+- 魔数：判断是否为无效数据包
+- 版本号：支持协议的升级
+- 序列化算法：消息正文采用的序列化，反序列化方式，json，protobuf，hessian，jdk等序列化方法
+- 指令类型：一般会指定与业务类型的指令
+- 请求序号：避免接收乱序，提供异步能力
+- 正文长度
+- 消息正文数据
+
+自定义协议进行编码和解码
+
+```java
+@Slf4j
+public class MessageCodec extends ByteToMessageCodec<Message> {
+
+    @Override
+    protected void encode(ChannelHandlerContext ctx, Message msg, ByteBuf out) throws Exception {
+        // 1. 4 字节的魔数
+        out.writeBytes(new byte[]{1, 2, 3, 4});
+        // 2. 1 字节的版本,
+        out.writeByte(1);
+        // 3. 1 字节的序列化方式 jdk 0 , json 1
+        out.writeByte(0);
+        // 4. 1 字节的指令类型
+        out.writeByte(msg.getMessageType());
+        // 5. 4 个字节
+        out.writeInt(msg.getSequenceId());
+        // 无意义，对齐填充
+        out.writeByte(0xff);
+        // 6. 获取内容的字节数组
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        ObjectOutputStream oos = new ObjectOutputStream(bos);
+        oos.writeObject(msg);
+        byte[] bytes = bos.toByteArray();
+        // 7. 长度
+        out.writeInt(bytes.length);
+        // 8. 写入内容
+        out.writeBytes(bytes);
+    }
+
+    @Override
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+        int magicNum = in.readInt();
+        byte version = in.readByte();
+        byte serializerType = in.readByte();
+        byte messageType = in.readByte();
+        int sequenceId = in.readInt();
+        in.readByte();
+        int length = in.readInt();
+        byte[] bytes = new byte[length];
+        in.readBytes(bytes, 0, length);
+        ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(bytes));
+        Message message = (Message) ois.readObject();
+        log.debug("{}, {}, {}, {}, {}, {}", magicNum, version, serializerType, messageType, sequenceId, length);
+        log.debug("{}", message);
+        out.add(message);
+    }
+}
+```
+
+注意：需要添加编解码器，若没有，可能存在粘包，半包现象。即发送消息时，若网络卡顿，消息只发送了一半，则解码消息时，根据请求头中的数据长度解码会出现异常，编解码器会对消息进行判断，若发现异常，则不会调用后续的协议解码。
+
+```java
+EmbeddedChannel channel = new EmbeddedChannel(
+    new LoggingHandler(),
+    new LengthFieldBasedFrameDecoder(
+        1024, 12, 4, 0, 0),
+    new MessageCodec()
+);
+```
+
+### 2.3 @Sharable
+
+Netty是多线程处理消息，那编解码器，日志handler等对象是否可以多线程调用一个？
+
+- 若handler不保存状态，则可以被多线程共享，就可以加注解@Sharable
+- 不能继承 ByteToMessageCodec 或 CombinedChannelDuplexHandler 父类，他们的构造方法对 @Sharable 有限制
+
+### 2.4 空闲检测
 
 
 
+#### 连接假死
 
+**原因**
 
+- 网络设备出现故障，底层TCP断开连接，服务器未感知到
+- 公网网络不稳定，出现丢包，如果出现连续丢包，现象就是客户端和服务器都发送和接收不到数据
+- 服务器线程阻塞，无法进行数据读写
 
+**问题**
 
+- 假死的连接占用的资源不能自动释放
+- 向假死的连接发送数据，得到的反馈是发送超时
 
+**服务器解决**
 
+- 
 
 
 
