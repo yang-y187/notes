@@ -1380,9 +1380,102 @@ netty 中
 * 控制 netty 接收缓冲区大小
 * 负责入站数据的分配，决定入站缓冲区的大小（并可动态调整），统一采用 direct 直接内存，具体池化还是非池化由 allocator 决定
 
+## 2，源码
+
+### 2.1 启动分析
+
+启动时的主要代码：主线为5步
+
+```java
+//1 netty 中使用 NioEventLoopGroup （简称 nio boss 线程）来封装线程和 selector
+Selector selector = Selector.open(); 
+
+//2 创建 NioServerSocketChannel，同时会初始化它关联的 handler，以及为原生 ssc 存储 config
+NioServerSocketChannel attachment = new NioServerSocketChannel();
+
+//3 创建 NioServerSocketChannel 时，创建了 java 原生的 ServerSocketChannel
+ServerSocketChannel serverSocketChannel = ServerSocketChannel.open(); 
+serverSocketChannel.configureBlocking(false);
+
+//4 启动 nio boss 线程执行接下来的操作
+
+//5 注册（仅关联 selector 和 NioServerSocketChannel），未关注事件
+SelectionKey selectionKey = serverSocketChannel.register(selector, 0, attachment);
+
+//6 head -> 初始化器 -> ServerBootstrapAcceptor -> tail，初始化器是一次性的，只为添加 acceptor
+
+//7 绑定端口
+serverSocketChannel.bind(new InetSocketAddress(8080));
+
+//8 触发 channel active 事件，在 head 中关注 op_accept 事件
+selectionKey.interestOps(SelectionKey.OP_ACCEPT);
+```
 
 
 
+**init & register regFuture 处理**
+
+- 1.1 init   ==main主线程执行，创建主线的ServerSocketChannel==
+  - 创建NIOServerSocketChannel   ==main主线程执行==
+  - 添加 NIOServerSocketChannel 初始化 handler  ==main主线程执行==
+    - 初始化handler 等待调用
+- 1.2 register  ==将ServerSocketChannel绑定到selector上==
+  - 启动nio boss 线程  main主线程执行  ==main主线程执行==
+  - **原生ssc 注册至selector 未关注事件** ==nio-thread执行==
+  - 执行NIOServerSocketChannel 初始化 handler  ==nio-thread执行==
+- 2 regFuture 等待回调 doBind0方法   ==将ServerSocketChannel监听指定端口，并制定触发事件==
+  - 原生NIOServerSocketChannel 绑定   ==nio-thread执行==
+  - 触发NIOServerSocketChannel active 事件  ==nio-thread执行==
+
+
+
+
+
+
+
+入口 `io.netty.bootstrap.ServerBootstrap#bind`
+
+关键代码 `io.netty.bootstrap.AbstractBootstrap#doBind`
+
+```java
+private ChannelFuture doBind(final SocketAddress localAddress) {
+	// 1. 执行初始化和注册 regFuture 会由 initAndRegister 设置其是否完成，从而回调 3.2 处代码
+    final ChannelFuture regFuture = initAndRegister();
+    final Channel channel = regFuture.channel();
+    if (regFuture.cause() != null) {
+        return regFuture;
+    }
+
+    // 2. 因为是 initAndRegister 异步执行，需要分两种情况来看，调试时也需要通过 suspend 断点类型加以区分
+    // 2.1 如果已经完成
+    if (regFuture.isDone()) {
+        ChannelPromise promise = channel.newPromise();
+        // 3.1 立刻调用 doBind0
+        doBind0(regFuture, channel, localAddress, promise);
+        return promise;
+    } 
+    // 2.2 还没有完成
+    else {
+        final PendingRegistrationPromise promise = new PendingRegistrationPromise(channel);
+        // 3.2 回调 doBind0
+        regFuture.addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future) throws Exception {
+                Throwable cause = future.cause();
+                if (cause != null) {
+                    // 处理异常...
+                    promise.setFailure(cause);
+                } else {
+                    promise.registered();
+					// 3. 由注册线程去执行 doBind0
+                    doBind0(regFuture, channel, localAddress, promise);
+                }
+            }
+        });
+        return promise;
+    }
+}
+```
 
 
 
