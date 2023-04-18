@@ -853,6 +853,10 @@ SearchHits hits = response.getHits();
 
 
 
+# 5，ES面试题
+
+## 1，为什么使用ElasticSearch？
+
 
 
 
