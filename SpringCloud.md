@@ -9,7 +9,7 @@
   - 分布式系统开发的成本高，（容错，分布式事务，分布式锁等）
   - 复杂性能高，各个微服务进行独立部署，在模块调用时，分布式会变得更麻烦
 
-常见问题肌解决办法
+常见问题解决办法
 
 - 管理微服务                                    (服务治理 注册中心[服务注册 发现 剔除])     nacos
 - 微服务间的通信                            (restful rpc dubbo feign)    httpclient("url",参数)，  springBoot  ，restTemplate("url",参数) ,, feign
