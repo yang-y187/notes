@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="d06a00ed-bc3a-4809-a7a7-4be2dff41f5b" name="Default Changelist" comment="" />
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Class" />
+      </list>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/../../../.." />
+  </component>
+  <component name="ProjectId" id="1bNKhjF0bin90u0UqmsXoplN0SI" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">
+    <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
+    <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
+    <property name="WebServerToolWindowFactoryState" value="false" />
+    <property name="aspect.path.notification.shown" value="true" />
+    <property name="extract.method.default.visibility" value="private" />
+    <property name="last_directory_selection" value="$PROJECT_DIR$/src/main/java/cn/itcast/server/handler" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
+    <property name="project.structure.last.edited" value="Modules" />
+    <property name="project.structure.proportion" value="0.0" />
+    <property name="project.structure.side.proportion" value="0.0" />
+    <property name="restartRequiresConfirmation" value="false" />
+    <property name="settings.editor.selected.configurable" value="editor.preferences.import" />
+  </component>
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="E:\git\netty-demo\src\main\java" />
+      <recent name="E:\git\netty-demo\src\main\java\cn\itcast\protocol" />
+    </key>
+    <key name="MoveClassesOrPackagesDialog.RECENTS_KEY">
+      <recent name="cn.itcast.protocol" />
+    </key>
+    <key name="MoveInnerDialog.RECENTS_KEY">
+      <recent name="cn.itcast.server.handler" />
+    </key>
+    <key name="CopyClassDialog.RECENTS_KEY">
+      <recent name="cn.itcast.source" />
+      <recent name="cn.itcast.client" />
+      <recent name="cn.itcast.server.handler" />
+      <recent name="cn.itcast.server.service" />
+      <recent name="cn.itcast.netty.c5" />
+    </key>
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="E:\git\netty-demo\src\main\java\cn\itcast\message" />
+      <recent name="E:\git\netty-demo\src\main\java\cn\itcast\server" />
+      <recent name="E:\git\netty-demo\src\main\java\cn\itcast\protocol" />
+      <recent name="E:\git\netty-demo\src\main\java\cn\itcast\protocol\google" />
+      <recent name="E:\git\netty-demo\src\main\resources" />
+    </key>
+  </component>
+  <component name="RunManager" selected="Application.TestBacklogClient">
+    <configuration name="RpcClientManager" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="cn.itcast.client.RpcClientManager" />
+      <module name="netty-demo" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="RpcServer" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="cn.itcast.server.RpcServer" />
+      <module name="netty-demo" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="TestBacklogClient" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="cn.itcast.source.TestBacklogClient" />
+      <module name="netty-demo" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="TestEventLoop" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="cn.itcast.source.TestEventLoop" />
+      <module name="netty-demo" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="TestSourceServer" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="cn.itcast.source.TestSourceServer" />
+      <module name="netty-demo" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <list>
+      <item itemvalue="Application.RpcServer" />
+      <item itemvalue="Application.RpcClientManager" />
+      <item itemvalue="Application.TestSourceServer" />
+      <item itemvalue="Application.TestEventLoop" />
+      <item itemvalue="Application.TestBacklogClient" />
+    </list>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Application.TestBacklogClient" />
+        <item itemvalue="Application.TestSourceServer" />
+        <item itemvalue="Application.TestEventLoop" />
+        <item itemvalue="Application.RpcServer" />
+        <item itemvalue="Application.RpcClientManager" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="SshConsoleOptionsProvider">
+    <option name="myEncoding" value="UTF-8" />
+  </component>
+  <component name="SvnConfiguration">
+    <configuration />
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="d06a00ed-bc3a-4809-a7a7-4be2dff41f5b" name="Default Changelist" comment="" />
+      <created>1588467232065</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1588467232065</updated>
+      <workItem from="1589192884814" duration="39380000" />
+      <workItem from="1682473924102" duration="4008000" />
+      <workItem from="1682511959566" duration="600000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="2" />
+  </component>
+  <component name="WindowStateProjectService">
+    <state x="-1459" y="125" key="SettingsEditor" timestamp="1682474102677">
+      <screen x="-1920" y="-51" width="1920" height="1080" />
+    </state>
+    <state x="-1459" y="125" key="SettingsEditor/-1920.-51.1920.1080/0.25.1792.1095@-1920.-51.1920.1080" timestamp="1682474102677" />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" suspend="THREAD" type="java-line">
+          <url>jar://$MAVEN_REPOSITORY$/io/netty/netty-all/4.1.39.Final/netty-all-4.1.39.Final-sources.jar!/io/netty/channel/nio/NioEventLoop.java</url>
+          <line>696</line>
+          <option name="timeStamp" value="141" />
+        </line-breakpoint>
+      </breakpoints>
+      <breakpoints-defaults>
+        <breakpoint suspend="THREAD" type="java-line" />
+      </breakpoints-defaults>
+    </breakpoint-manager>
+  </component>
+</project>
