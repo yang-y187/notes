@@ -683,12 +683,14 @@ POST /_aliases
 
   - match：匹配内容查询，会对**查询条件**分词，多词条之间采用or
 
+  - matchPhrase：匹配内容查询，会对**查询条件**分词，多词条之间采用and 即必须满足所有词条能先显示
+
   - term：精确查询，不对查询条件分词
 
   - terms：多关键字精确查询，该字段包含了指定值中的其中一个
 
   - 指定查询的返回字段
-
+  
     - ```json
       {
       	"_source": ["name", "nickname"],
@@ -703,7 +705,7 @@ POST /_aliases
   - Incldes：指定想要的字段
 
   - excludes：指定不想要的字段
-
+  
     - ```json
       {
        "_source": {
@@ -718,7 +720,7 @@ POST /_aliases
       ```
     
   - 组合查询
-
+  
     - must
     
     - must_not
@@ -728,14 +730,14 @@ POST /_aliases
       
     
   - 范围查询range
-
+  
     - gt >
     - gte >=
     - lt <
     - lte <=
 
   - 模糊查询
-
+  
     - **返回包含与搜索字词相近的字词的文档**，不是同一个词，注意区分
     - 编辑距离距离是将一个词语转换成另一个术语所需的一个字符更改的次数
 
@@ -744,10 +746,10 @@ POST /_aliases
     - desc 降序，asc 升序
 
   - 分页查询
-
+  
     - from：当前页的起始索引，默认从0开始，from=（pageNum-1）*size
     - size：每页的条数
-
+  
   - State 聚合 一次性返回指定字段的count，max，min，avg，sum五个指标
 
 
