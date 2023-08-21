@@ -1172,7 +1172,13 @@ public class IOCTest {
 
 ## 3，AOP（面向切面编程）
 
-AOP：在程序运行期间，将**某段代码**==动态的切入==到**指定方法**的**指定位置**进行运行的编程方式，为面向切面编程
+AOP：在程序运行期间，将**某段代码**==动态的切入==到**指定方法**的**指定位置**进行运行的编程方式，为面向切面编程。
+
+应用场景：
+
+- 日志场景，打印日志，获取出入参信息等
+- 统计场景：统计执行次数等
+- 熔断，限流，降级等
 
 #### AOP专业术语：
 
@@ -1445,6 +1451,22 @@ spring对通知方法的参数列表要求严格
         </aop:aspect>
     </aop:config>
 ```
+
+
+
+#### spring AOP 自动代理的实现
+
+spring中低层通过cgLib和JDK动态代理实现
+
+spring IOC中Bean的加载过程中，Bean在实例化前和初始化后等位置都进行提供了拓展点，会调用相应的BeanPostProcessor处理器对Bean进行处理。若开启了AspectJ动态代理（`@EnableAspectJAutoProxy` 注解），则会在IOC容器启动时，创建并注入一个AbstractAutoProxyCreator 自动代理对象，该对象实现了多个BeanPostProcessor，获取对象时，首先创建一个代理类，
+
+
+
+#### spring中@EnableAspectJAutoProxy 原理
+
+@EnableAspectJAutoProxy 
+
+
 
 ## 4，声明式事务
 
