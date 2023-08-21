@@ -1180,13 +1180,37 @@ AOP：在程序运行期间，将**某段代码**==动态的切入==到**指定�
 - 统计场景：统计执行次数等
 - 熔断，限流，降级等
 
-#### AOP专业术语：
+#### ==两种动态代理==
 
-![Image](Spring.assets/Image3)
+ JDK动态代理和Cglib动态代理
+
+##### JDK动态代理
+
+通过接口实现，通过反射实现一个实现代理接口的类，在调用具体方法时会调用InvokeHandler来处理。
+
+- ### 实现
+
+  - 通过java.lang.reflect.Proxy 创建代理对象，调用Proxy.newProxyInstance(ClassLoader loader, Class<?>[] interfaces, InvocationHandler h) 创建一个代理对象    入参为（类加载器，代理对象需要实现的接口，代理对象的处理器）
+
+  - 新生产的对象会继承Proxy类，是实现入参 代理对象实现的接口，调用的代理对象的方法，实际是调用InvocationHandler.invoke方法。
+
+  - jdk 动态代理在jvm运行时，会生成代理对象.class（这个文件可保存到本地目录）。其内部是通过调用Invocation.invoke方法，实际是 通过反射获取传入类的指定方法
+
+- ### Proxy.newProxyInstance方法
+
+  - JDK动态代理通过该方法创建代理对象，其内部通过etProxyClass0获取代理类的Class对象，通过构造器创建一个代理对象，该类因为上述继承了Proxy对象，构造器则有Proxy(InvocationHandler h)。可通过该方法创建对象
+
+- etProxyClass0(ClassLoader loader, Class<?>... interfaces) 方法
+
+  - 其内部首先从缓存中获取对应的代理类，若不存在，则通过ProxyClassFactory 代理类工厂创建代理对象
+  - 创建过程中，**首先校验接口，若接口为空，则抛出异常**（为什么jdk代理只能基于接口代理）
 
 
 
+- #### **为什么jdk代理只能基于接口代理**
 
+  - 创建对象过程中，会校验接口参数是否为空，若为空，则抛出异常
+  - 生成的代理对象会继承Proxy这个类，java是单继承关系。若是通过继承创建代理对象，则无法再继承Proxy对象，也无法创建该代理对象，因此只能通过接口代理
 
 #### **通知注解**
 
@@ -1464,7 +1488,7 @@ spring IOC中Bean的加载过程中，Bean在实例化前和初始化后等位�
 
 #### spring中@EnableAspectJAutoProxy 原理
 
-@EnableAspectJAutoProxy 
+@EnableAspectJAutoProxy 内部有导入@Import({AspectJAutoProxyRegistrar.class})注解，AspectJAutoProxyRegistrar类实现了ImportBeanDefinitionRegistrar 接口，该类注册了一个AnnotationAwareAspectJAutoProxyCreator 动态代理对象，该代理对象时一个BeanPostprocessor 处理器，spring加载Bean时，如果它需要被代理，则会创建一个代理对象
 
 
 
