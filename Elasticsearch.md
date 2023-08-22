@@ -439,16 +439,16 @@ PUT _cluster/settings
 ## 3.2 增加字段（略）
 
 ```http
-PUT package_waybil_v1/_mapping/_doc
+PUT es的index名/_mapping/es的type名
 {
-"properties": {
-"receivableAmount": {
-"type": "double"
-},
-"purchaseInsuranceAmount": {
-"type": "double"
-      }
-   }
+    "properties": {
+        "receivableAmount": {
+            "type": "double"
+        },
+        "purchaseInsuranceAmount": {
+            "type": "double"
+        }
+    }
 }
 ```
 
