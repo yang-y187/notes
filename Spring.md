@@ -1220,11 +1220,11 @@ AOP：在程序运行期间，将**某段代码**==动态的切入==到**指定�
 
 CgLib基于类代理，将被代理类的class文件加载进来，通过**修改字节码**生成被代理类的子类来处理
 
-实现
+实现（不做）
 
 - 需要通过org.springframework.cglib.proxy.Enhancer类来创建代理对象，
   - 传入参数为：被代理的类Class<?> superClass 和Callback callback 回调接口
-- 新生成的代理对象，继承了sprperClass被代理类，重写目标方法中会调用callback回调接口（方法拦截器）
+- 新生成的代理对象，继承了supperClass被代理类，重写目标方法中会调用callback回调接口（方法拦截器）
 
 
 
