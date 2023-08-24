@@ -28,17 +28,63 @@
 
 框架流程：  1），导包  2），写配置  3），测试
 
+spring的缺点：spring体系过于复杂，需要开发人员投入一定的学习成本
+
 ## 1，IOC
 
 IOC :控制反转；==（本质就是一个Map）==
 
-容器：管理所有的组件（有功能的类）；容器可以自动探查出那些组件（类）需要用到另一些组件（类）；容器帮助我们创建对象，并把对象赋值过去。
+IOC其实准确的说是编程思想，依赖一个对象时，由原来的主动创建，编程了通过IOC注入，使用方不需要过多的关注创建细节，比如创建对象细节，相互依赖等问题，全部由IOC容器完成，达到解耦的目的。
 
-（容器）与婚介所相似，按需分配。有对象需求，只需向容器请求，直接从容器中获取对象。因此，使用时，使用方成为了被动接受。
+DI：依赖注入。
 
-DI：依赖注入
+- ### 依赖注入DI和IOC的关系：
 
-容器知道哪个组件要运行时，需要另外的组件（类）；则通过反射给属性赋值
+  - 依赖注入不完全等同于IOC，依赖注入只是一个IOC的实现策略，还有依赖查找方式。
+    - 依赖查找：在应用程序里，调用IOC容器的接口去获取对应的Bean对象。有代码侵入性，使用较少。
+    - 依赖注入：在IOC容器启动时，通过构造器、字段、setter方法或接口等方式注入依赖。推荐使用
+
+- ### 注入方式有：构造器注入和setter注入
+
+  - **构造器注入不允许出现循环依赖，因为它要求注入的对象是成熟态。**不推荐使用（不懂的，可以看spring如何避免循环依赖）
+
+    有些代码里面，注入对象通过private final xxxx，那么需要创建构造器，并传入该参数，在spring构建该对象时，也是通过构造器的方式传入需要注入的对象。
+
+    - 优点：因为传入的是成熟态对象，因此一些变量是不可变的，这对程序的维护更方便
+
+- ### BeanFactory和ApplicationContext的关系（源码中有讲解）
+
+- ### spring中 初始化方法的执行顺序
+
+  1. **Aware接口：**aware:可感知的，它本身是一个空接口，但是spring中有各种它的实现接口**（原来接口也可以继承）**，IOC容器创建时，会回调用各个setxxx方法，注入指定的信息。可以在注入信息时，执行相关操作。
+
+     ```java
+     public interface BeanNameAware extends Aware {
+         void setBeanName(String name);
+     }
+     
+     public interface BeanClassLoaderAware extends Aware {
+         void setBeanClassLoader(ClassLoader classLoader);
+     }
+     
+     public interface BeanFactoryAware extends Aware {
+         void setBeanFactory(BeanFactory var1) throws BeansException;
+     }
+     ```
+
+  2. **@PostConstruct注解：**用来修饰非静态的void方法，只会执行一次。是java的注解，不是spring的
+
+     - 执行的时间是 Constructor(构造方法) -> @Autowired(依赖注入) -> @PostConstruct(注释的初始化方法)
+
+  3. **InitializingBean 接口：**实现了该接口，spring会调用afterPropertiesSet方法，spring提供的初始化方式。
+
+     - 在初始化Bean对象的时候调用。必须是Beanfactory设置完所有属性后，才会执行。
+
+  4. **xml配置initiate-method**，指定自定义初始化方法
+
+- @Bean的处理流程
+
+
 
 **核心容器**
 
@@ -49,7 +95,9 @@ spring-core-5.2.6.RELEASE
 spring-expression-5.2.6.RELEASE
 ```
 
-### 1，使用
+### 使用（可忽略）
+
+#### 1，使用
 
 创建SpringIOC.xml配置文件
 
@@ -70,7 +118,7 @@ spring-expression-5.2.6.RELEASE
         System.out.println("person01 = " + person01);
 ```
 
-### 2，细节：
+#### 2，细节：
 
 1. ApplicationContext (IOC容器的接口)
 2. 在容器中注册bean组件，我们通过id获取对象
@@ -79,7 +127,7 @@ spring-expression-5.2.6.RELEASE
 3. 同一组件在IOC容器中时单实例的，可以设置为多实例
 4. IOC容器创建组件对象时，是首先通过空参构造器创建对象，然后再通过getter/setter方法配置属性
 
-### 3，获取组件Bean方式
+#### 3，获取组件Bean方式
 
 从IOC容器中获取bean时，可以通过 id值获取，bean类型获取，若xml配置了多个该类型对象，获取时会出现报错
 
@@ -93,9 +141,9 @@ spring-expression-5.2.6.RELEASE
 
 ```
 
-### 4，xml配置属性方法
+#### 4，xml配置属性方法
 
-#### 1，set方法属性赋值
+##### 1，set方法属性赋值
 
 ```xml
 <bean id="person01" class="com.example.bean.person">
@@ -106,7 +154,7 @@ spring-expression-5.2.6.RELEASE
 </bean>
 ```
 
-#### 2，通过构造器属性赋值
+##### 2，通过构造器属性赋值
 
 通过有参构造器，直接进行创建对象,不必经过get，set方法（name，可以省略，但是赋值顺序是，构造器的默认顺序）
 
@@ -119,7 +167,7 @@ spring-expression-5.2.6.RELEASE
     </bean>
 ```
 
-#### 3，名称标签赋值
+##### 3，名称标签赋值
 
 通过p名称空间为bean赋值（可防止标签重复）
 
@@ -135,7 +183,7 @@ spring-expression-5.2.6.RELEASE
 </bean>
 ```
 
-#### 4，赋值null
+##### 4，赋值null
 
 ```xml
     <bean id="person01" class="com.example.bean.Person">
@@ -145,7 +193,7 @@ spring-expression-5.2.6.RELEASE
     </bean>
 ```
 
-#### 5，引用类型赋值
+##### 5，引用类型赋值
 
 
 
@@ -177,9 +225,9 @@ spring-expression-5.2.6.RELEASE
         </property>
 ```
 
-#### 6，集合类型赋值
+##### 6，集合类型赋值
 
-##### list类型
+###### list类型
 
 ```xml
         <property name="books">
@@ -194,7 +242,7 @@ spring-expression-5.2.6.RELEASE
 
 <list> 表示创建一个ArrayList
 
-##### Map类型
+###### Map类型
 
 <map> 创建 LinkedHashMap
 
@@ -207,7 +255,7 @@ spring-expression-5.2.6.RELEASE
         </property>
 ```
 
-##### properties类型
+###### properties类型
 
 properties为键值对。k=v，k，v都是string，值写在标签体中
 
@@ -220,7 +268,7 @@ properties为键值对。k=v，k，v都是string，值写在标签体中
         </property>
 ```
 
-##### util名称空间，创建一个公共变量
+###### util名称空间，创建一个公共变量
 
 ```xml
     <util:map id="maputil">
@@ -229,7 +277,7 @@ properties为键值对。k=v，k，v都是string，值写在标签体中
     </util:map>
 ```
 
-#### 7,级联属性赋值 
+##### 7,级联属性赋值 
 
 级联属性（属性.属性）即对引用来的bean也可进行更改其属性，即该引用对象信息改动
 
@@ -240,7 +288,7 @@ properties为键值对。k=v，k，v都是string，值写在标签体中
     </bean>
 ```
 
-#### 8，继承属性
+##### 8，继承属性
 
 parent：指定该bean配置继承哪个已经配置的bean属性。**继承重用设置的信息。可以property更改信息，但仅改动当前对象**
 
@@ -253,7 +301,7 @@ parent：指定该bean配置继承哪个已经配置的bean属性。**继承重�
 
 abstract属性：abstract="true",创建对象只能被继承,即不能通过getBean获取
 
-#### 9，单实例多实例配置
+##### 9，单实例多实例配置
 
 scope：属性，配置作用域范围，本质为控制IOC创建对象是否是单实例
 
@@ -277,7 +325,7 @@ singleton：单实例的
     </bean>
 ```
 
-#### 10，静态工厂与实例工厂
+##### 10，静态工厂与实例工厂
 
 工厂帮助我们创建对象，有一个专门帮助我们创建对象的类，这个类就是工厂
 
@@ -315,7 +363,7 @@ factory-method ：指定为工厂类，并应用constructor-arg传入参数
     </bean>
 ```
 
-##### 实例工厂
+###### 实例工厂
 
 1. 配置出实例工厂对象
 2. 配置我们要创建的bean，使用哪个工厂创建
@@ -333,7 +381,7 @@ factory-method ：指定为工厂类，并应用constructor-arg传入参数
     </bean>
 ```
 
-##### 实现FactoryBean接口
+###### 实现FactoryBean接口
 
 实现该接口，Spring自动识别为Factory，
 
@@ -370,7 +418,7 @@ public class MyFactoryBean implements FactoryBean<Book> {
 }
 ```
 
-#### 11，创建带有生命周期的Bean
+##### 11，创建带有生命周期的Bean
 
 生命周期：bean的创建到销毁  ioc容器中的bean：    
 
@@ -388,7 +436,7 @@ public class MyFactoryBean implements FactoryBean<Book> {
     </bean>
 ```
 
-#### 12后置处理器方法
+##### 12后置处理器方法
 
 **在IOC容器初始化每一个对象前后，调用该方法**
 
@@ -418,7 +466,7 @@ xml配置
 <bean class="com.example.bean.MyBeanPostMethod" id="beanPostMethod"></bean>
 ```
 
-#### 12,spring连接外部文件
+##### 12,spring连接外部文件
 
 ==应用为：spring管理数据库连接池==
 
@@ -467,7 +515,7 @@ jdbcUrl=jdbc:mysql://localhost:3306/test
 driverClass=com.mysql.jdbc.Driver
 ```
 
-#### 13，XML自动装配（自动赋值）
+##### 13，XML自动装配（自动赋值）
 
 **autowire 配置自动装配**
 
@@ -501,7 +549,7 @@ driverClass=com.mysql.jdbc.Driver
 - 如果按照类型找到了多个；参数的名作为id继续匹配;找到就装配；找不到就null；   
 - 不会报错； 自动的为属性赋值：
 
-#### 14，SpEL
+##### 14，SpEL
 
 SpEL使用#{...}作为定界符，所有大框号内的字符都被认为是SpEL表达式
 
@@ -530,7 +578,7 @@ SpEL使用#{...}作为定界符，所有大框号内的字符都被认为是SpEL
      </bean>
 ```
 
-### 5，注解创建Dao，Service，Controller
+#### 5，注解创建Dao，Service，Controller
 
 Sping四个注解
 
@@ -587,7 +635,7 @@ type指定排除规则
 
 context:include-filter 添加指定
 
-### 6，@Autowired （自动注入）
+#### 6，@Autowired （自动注入）
 
 通过该注释，自动为属性赋值
 
@@ -603,26 +651,26 @@ context:include-filter 添加指定
       1. 找的，则匹配
       2. 没找到则报错
 
-#### **@Qualifier("id")**
+##### @Qualifier("id")
 
 若antowired注释还有@Qualifier("id")查找，则直接选择id查找，注入
 
 未找到，则报错
 
-#### @Autowired 内置属性： request
+##### @Autowired 内置属性： request
 
 默认为request=true  因此，为找到注入，则报错
 
 request=false，则注入null。不会报错
 
-#### @Autowired 可以修饰方法
+##### @Autowired 可以修饰方法
 
 - 该方法会在Bean创建时自动运行
 
 - 为方法的每一个形参自动注入参数值
 - 参数上也可标注注释**@Qualifier("id")**
 
-#### @Autowired，@Resource，@Inject都是自动装配的意思
+##### @Autowired，@Resource，@Inject都是自动装配的意思
 
 区别：
 
@@ -630,7 +678,7 @@ request=false，则注入null。不会报错
 
 @Resource: java的标准注释，拓展性更强。若使用其他的容器框架，@Resource仍可用，@Autowired则不可用
 
-### 7，泛型依赖注入
+#### 7，泛型依赖注入
 
 Spring可以使用带泛型的父类类型来确定这个子类类型
 
@@ -639,6 +687,8 @@ Spring可以使用带泛型的父类类型来确定这个子类类型
 如下图所示，调用bookservice和userservice方法，因为继承baseservice，所以继承的方法以及属性也可调用。以bookservice为例，调用bookservice的save方法，会传入泛型Book，则自动注入泛型，会找到baseDao，baseDao的泛型为Book，因此找到BookDao。BookDao继承了baseDao。所以即使baseservice以及basedao没有加入IOC容器仍可进行调用。就是因为真正调用的方法为继承子类。
 
 ![Image](/../Spring.assets/Image.png)
+
+
 
 ### 8，IOC源码
 
@@ -726,7 +776,7 @@ public ClassPathXmlApplicationContext(String configLocation) throws BeansExcepti
 
 ApplicationContext最终实现BeanFactory：ConfigurableListableBeanFactory可以创建bean对象。IOC功能与bean工厂类似。为创建Bean对象
 
-![图片1](/../Spring.assets/%E5%9B%BE%E7%89%871.png)
+![图片1](../Spring.assets/%E5%9B%BE%E7%89%871.png)
 
 BeanFactory和ApplicationContext的区别；
 
