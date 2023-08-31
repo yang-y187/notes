@@ -1196,7 +1196,7 @@ protected void doRegisterBeanDefinitions(Element root) {
     }
     // <3> 解析前处理
     preProcessXml(root);
-    // <4> 解析出 XML Document 中的 BeanDefinition 并注册
+    // <4> 解析出 XML Document 中的 BeanDefinition 并注册【重点】
     parseBeanDefinitions(root, this.delegate);
     // <5> 解析后处理
     postProcessXml(root);
@@ -1230,7 +1230,9 @@ protected void parseBeanDefinitions(Element root, BeanDefinitionParserDelegate d
         delegate.parseCustomElement(root);
     }
 }
-
+/**
+* Spring 默认解析xml配置
+*/
 
 private void parseDefaultElement(Element ele, BeanDefinitionParserDelegate delegate) {
     if (delegate.nodeNameEquals(ele, IMPORT_ELEMENT)) {
@@ -1242,7 +1244,7 @@ private void parseDefaultElement(Element ele, BeanDefinitionParserDelegate deleg
         processAliasRegistration(ele);
     }
     else if (delegate.nodeNameEquals(ele, BEAN_ELEMENT)) {
-        // 解析 `<bean />`
+        // 解析 `<bean />` 【重点】
         processBeanDefinition(ele, delegate);
     }
     else if (delegate.nodeNameEquals(ele, NESTED_BEANS_ELEMENT)) {
@@ -1250,16 +1252,18 @@ private void parseDefaultElement(Element ele, BeanDefinitionParserDelegate deleg
         doRegisterBeanDefinitions(ele);
     }
 }
-
+/**
+* 【重点】解析Bean对象
+*/
 protected void processBeanDefinition(Element ele, BeanDefinitionParserDelegate delegate) {
-    // <1> 解析 `<bean />` 标签，返回 BeanDefinitionHolder 对象（包含 BeanDefinition、beanName、aliases）
+    // <1> 解析 `<bean />` 标签，返回 BeanDefinitionHolder 对象（包含 BeanDefinition、beanName、aliases） 【重点】
     BeanDefinitionHolder bdHolder = delegate.parseBeanDefinitionElement(ele);
     if (bdHolder != null) {
         // <2> 对该标签进行装饰，一般不会，暂时忽略
         bdHolder = delegate.decorateBeanDefinitionIfRequired(ele, bdHolder);
         try {
             // Register the final decorated instance.
-            // <3> 进行 BeanDefinition 的注册
+            // <3> 进行 BeanDefinition 的注册 【重点】
             BeanDefinitionReaderUtils.registerBeanDefinition(bdHolder, getReaderContext().getRegistry());
         }
         catch (BeanDefinitionStoreException ex) {
@@ -1277,9 +1281,22 @@ protected void processBeanDefinition(Element ele, BeanDefinitionParserDelegate d
 
 #### processBeanDefinition方法
 
-该方法将xml文件中某个`<Bean>`标签，解析成BeanDefinition。方法返回一个BeanDefinitionHolder
+该方法将xml文件中某个`<bean>`标签，解析成BeanDefinition。方法返回一个BeanDefinitionHolder
 
-- 获取标签中的ID和name属性
+- 获取别名信息
+
+  - 获取标签中的ID和name属性   （id和name区别不大，若两个都配置，则优先使用id，若都没配置，则使用默认的类名）
+
+  - 将Bean的别名全部添加到新建的别名集合（当前临时集合，后续会统一管理中）
+  - 优先选择id作为Bean的别名，若为空，则选择name
+
+  - 校验Bean别名的唯一性
+
+- 解析XML文件中的`<bean/>`标签，调用重载方法:parseBeanDefinitionElement方法，解析`<bean>  <bean/>`一对标签中的配置信息，返回GenericBeanDefinition对象
+
+  - 
+
+
 
 ```java
 @Nullable
@@ -1359,6 +1376,65 @@ public BeanDefinitionHolder parseBeanDefinitionElement(Element ele, @Nullable Be
 ```
 
 
+
+parseBeanDefinitionElement()方法，
+
+```java
+@Nullable
+public AbstractBeanDefinition parseBeanDefinitionElement(
+        Element ele, String beanName, @Nullable BeanDefinition containingBean) {
+
+    this.parseState.push(new BeanEntry(beanName));
+
+    // <1> 获取 `class` 和 `parent` 属性
+    String className = null;
+    if (ele.hasAttribute(CLASS_ATTRIBUTE)) {
+        className = ele.getAttribute(CLASS_ATTRIBUTE).trim();
+    }
+    String parent = null;
+    if (ele.hasAttribute(PARENT_ATTRIBUTE)) {
+        parent = ele.getAttribute(PARENT_ATTRIBUTE);
+    }
+    try {
+        // <2> 构建一个 GenericBeanDefinition 对象 `bd`
+        AbstractBeanDefinition bd = createBeanDefinition(className, parent);
+
+        // <3> 解析 `<bean />` 的各种属性并赋值
+        parseBeanDefinitionAttributes(ele, beanName, containingBean, bd);
+        // 提取 description
+        bd.setDescription(DomUtils.getChildElementValueByTagName(ele, DESCRIPTION_ELEMENT));
+
+        // <4> 解析 `<bean />` 的子标签，生成的对象设置到 `bd` 中
+
+        // <4.1> 解析 `<meta />` 元数据标签
+        parseMetaElements(ele, bd);
+        // <4.2> 解析 `<lookup-method />` 标签
+        parseLookupOverrideSubElements(ele, bd.getMethodOverrides());
+        // <4.3> 解析 `<replaced-method />` 标签
+        parseReplacedMethodSubElements(ele, bd.getMethodOverrides());
+
+        // <4.4> 解析 `<constructor-arg />` 构造函数的参数集合标签
+        parseConstructorArgElements(ele, bd);
+        // <4.5> 解析 `<property />` 属性标签
+        parsePropertyElements(ele, bd);
+        // <4.5> 解析 `<qualifier />` 标签
+        parseQualifierElements(ele, bd);
+
+        // <5> 设置 Bean 的 `resource` 资源为 XML 文件资源
+        bd.setResource(this.readerContext.getResource());
+        // <6> 设置 Bean 的 `source` 来源为 `<bean />` 标签对象
+        bd.setSource(extractSource(ele));
+
+        return bd;
+    }
+    // ... 省略 catch 各种异常
+    finally {
+        this.parseState.pop();
+    }
+
+    return null;
+}
+```
 
 
 
