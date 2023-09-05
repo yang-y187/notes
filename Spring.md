@@ -1290,13 +1290,23 @@ protected void processBeanDefinition(Element ele, BeanDefinitionParserDelegate d
   - 将Bean的别名全部添加到新建的别名集合（当前临时集合，后续会统一管理中）
   - 优先选择id作为Bean的别名，若为空，则选择name
 
+  - 若都没有，则自动生成一个BeanName
+
   - 校验Bean别名的唯一性
 
-- 解析XML文件中的`<bean/>`标签，调用重载方法:parseBeanDefinitionElement方法，解析`<bean>  <bean/>`一对标签中的配置信息，返回GenericBeanDefinition对象
+- 解析XML文件中的`<bean/>`标签，调用重载方法:parseBeanDefinitionElement方法，解析默认的命名空间，解析`<bean>  <bean/>`一对标签中的配置信息，赋值到GenericBeanDefinition对象
 
-  - 
-
-
+  - 获取Bean标签中的Class和parent属性并赋值。指定当前类和父类。
+  - 解析Bean的各种属性赋值（scope、abstract、lazy-init、autowire、depends-on、autowire-candidate、primary、init-method、destroy-method、factory-method）
+  - 解析Bean的各种子标签
+    - 解析 `<meta />` 元数据标签，将 key-value 保存至 Map 中
+    - 解析 `<lookup-method />` 标签，解析成 LookupOverride 对象，用于实现 Bean 中的某个方法
+    - 解析 `<replaced-method />` 标签，解析成 ReplaceOverride 对象，用于替换 Bean 中的某个方法
+    - 解析 `<constructor-arg />` 构造函数的参数集合标签，将各个参数解析出来，可根据 index 属性进行排序
+    - 解析 `<property />` 属性标签，将各个属性解析出来，每个属性对应一个 PropertyValue，添加至 `bd` 的 MutablePropertyValues 属性中
+    - 解析 `<qualifier />` 标签，解析出需要注入的对象 AutowireCandidateQualifier
+  - 设置resource资源方式为XML文件资源
+  - 设置Bean的来源source=为Bean标签
 
 ```java
 @Nullable
@@ -1437,6 +1447,202 @@ public AbstractBeanDefinition parseBeanDefinitionElement(
 ```
 
 
+
+#### registerBeanDefinition方法
+
+通过上一步解析xml文件返回的BeanDefinitionHolder，生成注册成BeanDefinition
+
+- 注册BeanDefinition，registry.registerBeanDefinition(beanName, definitionHolder.getBeanDefinition());方法， 实际调用的是实现类是DefaultListableBeanFactory，Spring底层的IOC容器，
+- 注册alias别名 （别名也存储在一个currentHashMap中，key：类名，value：Alias别名）
+
+```java
+public static void registerBeanDefinition(
+        BeanDefinitionHolder definitionHolder, BeanDefinitionRegistry registry)
+        throws BeanDefinitionStoreException {
+
+    // <1> 注册 BeanDefinition
+    // Register bean definition under primary name.
+    String beanName = definitionHolder.getBeanName();
+    registry.registerBeanDefinition(beanName, definitionHolder.getBeanDefinition());
+
+    // <2> 注册 alias 别名
+    // Register aliases for bean name, if any.
+    String[] aliases = definitionHolder.getAliases();
+    if (aliases != null) {
+        for (String alias : aliases) {
+            registry.registerAlias(beanName, alias);
+        }
+    }
+}
+```
+
+##### registerBeanDefinition 注册beanDefinition
+
+- 校验beanName和BeanDefinition
+- 从`currentHashMap<String,BeanDefinition>`中通过BeanName获取，以此判断是否注册了该BeanDefinition,不允许名称相同，则抛异常
+- 注册时，首先判断是否已经开始创建Bean
+  - 若是：则需要对currentHashMap加锁（是不是很奇怪？ currentHashmap的put和get都是原子操作，可以保证线程安全，但是如果多个线程分别调用get和put，则需要加锁 。另外BeanDefinitionNames `List<String>`集合，使用时创建一个新的，则也是为了避免并发问题）
+    - 在map中添加数据信息，并且创建一个新的BeanDefinitionNames `List<String>`集合，添加值，最后赋值。
+  - 若不是，则直接在map和BeanDefinitionNames中添加数据信息
+
+```java
+// org.springframework.beans.factory.support.DefaultListableBeanFactory
+@Override
+public void registerBeanDefinition(String beanName, BeanDefinition beanDefinition)
+        throws BeanDefinitionStoreException {
+
+    // 校验 beanName 与 beanDefinition 非空
+    Assert.hasText(beanName, "Bean name must not be empty");
+    Assert.notNull(beanDefinition, "BeanDefinition must not be null");
+
+    // <1> 校验 BeanDefinition
+    // 这是注册前的最后一次校验了，主要是对属性 methodOverrides 进行校验
+    if (beanDefinition instanceof AbstractBeanDefinition) {
+        try {
+            ((AbstractBeanDefinition) beanDefinition).validate();
+        }
+        catch (BeanDefinitionValidationException ex) {
+            throw new BeanDefinitionStoreException(beanDefinition.getResourceDescription(), beanName,
+                    "Validation of bean definition failed", ex);
+        }
+    }
+
+    // <2> 从缓存中获取指定 beanName 的 BeanDefinition
+    BeanDefinition existingDefinition = this.beanDefinitionMap.get(beanName);
+    // <3> 如果已经存在
+    if (existingDefinition != null) {
+        // 如果存在但是不允许覆盖，抛出异常
+        if (!isAllowBeanDefinitionOverriding()) {
+            throw new BeanDefinitionOverrideException(beanName, beanDefinition, existingDefinition);
+        }
+        // 覆盖 beanDefinition 大于 被覆盖的 beanDefinition 的 ROLE ，打印 info 日志
+        else if (existingDefinition.getRole() < beanDefinition.getRole()) {
+            // e.g. was ROLE_APPLICATION, now overriding with ROLE_SUPPORT or ROLE_INFRASTRUCTURE
+            if (logger.isInfoEnabled()) {
+                logger.info("Overriding user-defined bean definition for bean '" + beanName +
+                        "' with a framework-generated bean definition: replacing [" +
+                        existingDefinition + "] with [" + beanDefinition + "]");
+            }
+        }
+        // 覆盖 beanDefinition 与 被覆盖的 beanDefinition 不相同，打印 debug 日志
+        else if (!beanDefinition.equals(existingDefinition)) {
+            if (logger.isDebugEnabled()) {
+                logger.debug("Overriding bean definition for bean '" + beanName +
+                        "' with a different definition: replacing [" + existingDefinition +
+                        "] with [" + beanDefinition + "]");
+            }
+        }
+        // 其它，打印 debug 日志
+        else {
+            if (logger.isTraceEnabled()) {
+                logger.trace("Overriding bean definition for bean '" + beanName +
+                        "' with an equivalent definition: replacing [" + existingDefinition +
+                        "] with [" + beanDefinition + "]");
+            }
+        }
+        this.beanDefinitionMap.put(beanName, beanDefinition);
+    }
+    // <4> 如果未存在
+    else {
+        // 检测创建 Bean 阶段是否已经开启，如果开启了则需要对 beanDefinitionMap 进行并发控制
+        if (hasBeanCreationStarted()) {
+            // beanDefinitionMap 为全局变量，避免并发情况
+            // Cannot modify startup-time collection elements anymore (for stable iteration)
+            synchronized (this.beanDefinitionMap) {
+                // 添加到 BeanDefinition 到 beanDefinitionMap 中
+                this.beanDefinitionMap.put(beanName, beanDefinition);
+                // 添加 beanName 到 beanDefinitionNames 中
+                List<String> updatedDefinitions = new ArrayList<>(this.beanDefinitionNames.size() + 1);
+                updatedDefinitions.addAll(this.beanDefinitionNames);
+                updatedDefinitions.add(beanName);
+                this.beanDefinitionNames = updatedDefinitions;
+                // 从 manualSingletonNames 移除 beanName
+                removeManualSingletonName(beanName);
+            }
+        }
+        else {
+            // 添加到 BeanDefinition 到 beanDefinitionMap 中
+            // Still in startup registration phase
+            this.beanDefinitionMap.put(beanName, beanDefinition);
+            // 添加 beanName 到 beanDefinitionNames 中，保证注册顺序
+            this.beanDefinitionNames.add(beanName);
+            // 从 manualSingletonNames 移除 beanName
+            removeManualSingletonName(beanName);
+        }
+        this.frozenBeanDefinitionNames = null;
+    }
+
+    // <5> 重新设置 beanName 对应的缓存
+    if (existingDefinition != null || containsSingleton(beanName)) {
+        resetBeanDefinition(beanName);
+    }
+}
+```
+
+##### registerAlias 注册Alias别名
+
+- 判断别名是否与BeanName相同，相同则registerAlias <String,String> 可以移除该别名，也就是说 **registerAlias只记录那些提供了指定别名的Bean**
+- 若出现别名一致，但没有注册的情况（上面在注册BeanDefinition时已经进行了校验，还还出现别名相同的情况吗？ 会，因为是多线程执行，可能其他线程只注册别名，这也是为什么加锁的原因）
+- registerAlias为currentHashMap<String,String>
+
+```java
+// org.springframework.core.SimpleAliasRegistry
+@Override
+public void registerAlias(String name, String alias) {
+   // 校验 name 、 alias
+   Assert.hasText(name, "'name' must not be empty");
+   Assert.hasText(alias, "'alias' must not be empty");
+   synchronized (this.aliasMap) {
+      // name == alias 则去掉alias
+      if (alias.equals(name)) {
+         this.aliasMap.remove(alias);
+         if (logger.isDebugEnabled()) {
+            logger.debug("Alias definition '" + alias + "' ignored since it points to same name");
+         }
+      }
+      else {
+         // 获取 alias 已注册的 beanName
+         String registeredName = this.aliasMap.get(alias);
+         // 已存在
+         if (registeredName != null) {
+            // 相同，则 return ，无需重复注册
+            if (registeredName.equals(name)) {
+               // An existing alias - no need to re-register
+               return;
+            }
+            // 不允许覆盖，则抛出 IllegalStateException 异常
+            if (!allowAliasOverriding()) {
+               throw new IllegalStateException("Cannot define alias '" + alias + "' for name '" +
+                     name + "': It is already registered for name '" + registeredName + "'.");
+            }
+            if (logger.isDebugEnabled()) {
+               logger.debug("Overriding alias '" + alias + "' definition for registered name '" +
+                     registeredName + "' with new target name '" + name + "'");
+            }
+         }
+         // 校验，是否存在循环指向
+         checkForAliasCircle(name, alias);
+         // 注册 alias
+         this.aliasMap.put(alias, name);
+         if (logger.isTraceEnabled()) {
+            logger.trace("Alias definition '" + alias + "' registered for name '" + name + "'");
+         }
+      }
+   }
+}
+```
+
+
+
+#### BeanDefinition 加载阶段简述
+
+解析出 XML 文件中的 BeanDefinition 并注册的整个过程大致如下：
+
+1. 根据 XSD 文件对 XML 文件进行校验
+2. 将 XML 文件资源转换成 `org.w3c.dom.Document` 对象
+3. 根据 Document 对象解析`<beans/>`标签，遍历所有的子标签
+   1. 如果是子标签是默认的命名空间（为空或者 `http://www.springframework.org/schema/beans`）则进行处理，例如：`<import>`、`<alias />`、`<bean />`和`<beans />`，其中 `<bean />` 会被解析出一个 **GenericBeanDefinition** 对象，然后进行注册
+   2. 否则，找到对应的 **NamespaceHandler** 对象进行解析，例如：`<context:component-scan />` 、`<context:annotation-config />`、`<util:list />`，这些非默认命名空间的标签都会有对应的 **BeanDefinitionParser** 解析器
 
 
 
