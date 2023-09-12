@@ -1646,6 +1646,10 @@ public void registerAlias(String name, String alias) {
 
 
 
+### BeanDefinition的解析过程 （注解方式）
+
+
+
 
 
 ### 8，IOC源码
