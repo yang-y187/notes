@@ -1656,6 +1656,10 @@ xml文件中会通过**ClassPathBeanDefinitionScanner** 进行扫描，来获取
 
 继承了ClassPathScanningCandidateComponentProvider，classpath下BeanDefinition的扫描器，支持设置过滤器。默认三个过滤器**@Component**，javax.annotation.ManagedBean和JSR-330 的 javax.inject.Named注解过滤器
 
+- ClassPathBeanDefinitionScanner 最后调用的都是一个方法
+- 传入注册中心
+- 最后执行registerDefaultFilters()方法
+
 ```java
 public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateComponentProvider {
 
@@ -1708,13 +1712,59 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 
 ```
 
+##### registerDefaultFilters()
+
+注册默认的过滤器，默认的过滤器包括@Component注解、@ManagedBean注解和@Named注解 三个注解的过滤器。
+
+- 
+
+```java
+protected void registerDefaultFilters() {
+    // 添加 @Component 注解的过滤器（具有层次性），@Component 的派生注解都符合条件
+    this.includeFilters.add(new AnnotationTypeFilter(Component.class));
+    ClassLoader cl = ClassPathScanningCandidateComponentProvider.class.getClassLoader();
+    try {
+        this.includeFilters.add(new AnnotationTypeFilter(
+                ((Class<? extends Annotation>) ClassUtils.forName("javax.annotation.ManagedBean", cl)), false));
+        logger.trace("JSR-250 'javax.annotation.ManagedBean' found and supported for component scanning");
+    }
+    catch (ClassNotFoundException ex) {
+        // JSR-250 1.1 API (as included in Java EE 6) not available - simply skip.
+    }
+    try {
+        this.includeFilters.add(new AnnotationTypeFilter(
+                ((Class<? extends Annotation>) ClassUtils.forName("javax.inject.Named", cl)), false));
+        logger.trace("JSR-330 'javax.inject.Named' annotation found and supported for component scanning");
+    }
+    catch (ClassNotFoundException ex) {
+        // JSR-330 API not available - simply skip.
+    }
+}
+
+```
 
 
 
+##### setResourceLoader(resourceLoader)
+
+ 第一步加载了默认的过滤器，第二步设置资源加载对象
+
+- 通过资源加载器生成资源解析器
+- 通过资源加载器生成元数据读取工厂 metadataReaderFactory
+- 设置加载器加载器，并加载出**CandidateComponentsIndex对象**
 
 
 
+```java
+@Override
+public void setResourceLoader(@Nullable ResourceLoader resourceLoader) {
+    this.resourcePatternResolver = ResourcePatternUtils.getResourcePatternResolver(resourceLoader);
+    this.metadataReaderFactory = new CachingMetadataReaderFactory(resourceLoader);
+    // 获取所有 `META-INF/spring.components` 文件中的内容
+    this.componentsIndex = CandidateComponentsIndexLoader.loadIndex(this.resourcePatternResolver.getClassLoader());
+}
 
+```
 
 
 
