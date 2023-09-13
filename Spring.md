@@ -1646,7 +1646,75 @@ public void registerAlias(String name, String alias) {
 
 
 
-### BeanDefinition的解析过程 （注解方式）
+### ==BeanDefinition的解析过程 （注解方式）==
+
+xml文件中会通过**ClassPathBeanDefinitionScanner** 进行扫描，来获取所有的注解`@component`
+
+@compinentScant注解也是基于该扫描器实现
+
+#### ClassPathBeanDefinitionScanner
+
+继承了ClassPathScanningCandidateComponentProvider，classpath下BeanDefinition的扫描器，支持设置过滤器。默认三个过滤器**@Component**，javax.annotation.ManagedBean和JSR-330 的 javax.inject.Named注解过滤器
+
+```java
+public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateComponentProvider {
+
+	/** BeanDefinition 注册中心 DefaultListableBeanFactory */
+	private final BeanDefinitionRegistry registry;
+
+	/** BeanDefinition 的默认配置 */
+	private BeanDefinitionDefaults beanDefinitionDefaults = new BeanDefinitionDefaults();
+
+	@Nullable
+	private String[] autowireCandidatePatterns;
+
+	/** Bean 的名称生成器 */
+	private BeanNameGenerator beanNameGenerator = new AnnotationBeanNameGenerator();
+
+	private ScopeMetadataResolver scopeMetadataResolver = new AnnotationScopeMetadataResolver();
+
+	/** 是否注册几个关于注解的 PostProcessor 处理器 */
+	private boolean includeAnnotationConfig = true;
+
+	public ClassPathBeanDefinitionScanner(BeanDefinitionRegistry registry) {
+		this(registry, true);
+	}
+
+	public ClassPathBeanDefinitionScanner(BeanDefinitionRegistry registry, boolean useDefaultFilters) {
+		this(registry, useDefaultFilters, getOrCreateEnvironment(registry));
+	}
+
+	public ClassPathBeanDefinitionScanner(BeanDefinitionRegistry registry, boolean useDefaultFilters,
+			Environment environment) {
+		this(registry, useDefaultFilters, environment,
+				(registry instanceof ResourceLoader ? (ResourceLoader) registry : null));
+	}
+
+	public ClassPathBeanDefinitionScanner(BeanDefinitionRegistry registry, boolean useDefaultFilters,
+			Environment environment, @Nullable ResourceLoader resourceLoader) {
+
+		Assert.notNull(registry, "BeanDefinitionRegistry must not be null");
+		this.registry = registry;
+
+		if (useDefaultFilters) {
+			// 注册默认的过滤器，@Component 注解的过滤器（具有层次性）
+			registerDefaultFilters();
+		}
+		setEnvironment(environment);
+		// 设置资源加载对象，会尝试加载出 CandidateComponentsIndex 对象（保存 `META-INF/spring.components` 文件中的内容，不存在该对象为 `null`）
+		setResourceLoader(resourceLoader);
+	}
+}
+
+```
+
+
+
+
+
+
+
+
 
 
 
@@ -2223,7 +2291,8 @@ AOP：在程序运行期间，将**某段代码**==动态的切入==到**指定�
 - #### 为什么jdk代理只能基于接口代理
 
   - 创建对象过程中，会校验接口参数是否为空，若为空，则抛出异常
-  - 生成的代理对象会继承Proxy这个类，java是单继承关系。若是通过继承创建代理对象，则无法再继承Proxy对象，也无法创建该代理对象，因此只能通过接口代理。
+  - 生成的代理对象会继承Proxy这个类（不是被代理类，是一个指定类），java是单继承关系。若是通过继承创建代理对象，则无法再继承Proxy对象，也无法创建该代理对象，因此只能通过接口代理。
+    - 通过继承该Proxy类实现所有的代理方法，实际是通过invoke调用
   - 静态代理有两种方式，也分别是cglib和jdk代理的实现方式
     - 继承需要代理的类，然后在代理类中进行一些操作，然后调用父类的方法
     - 使用接口的方法，代理类和被代理类实现相同的接口，然后代理类内部聚合了被代理类对象，执行方法时，执行完相应的逻辑后，调用被代理类的相应方法（这也表明如果代理对象的方法不是接口定义的方法，则无法代理）
