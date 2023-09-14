@@ -1712,7 +1712,9 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 
 ```
 
-##### registerDefaultFilters()
+##### 构造函数
+
+###### registerDefaultFilters()
 
 注册默认的过滤器，默认的过滤器包括@Component注解、@ManagedBean注解和@Named注解 三个注解的过滤器。
 
@@ -1745,7 +1747,7 @@ protected void registerDefaultFilters() {
 
 
 
-##### setResourceLoader(resourceLoader)
+###### setResourceLoader(resourceLoader)
 
  第一步加载了默认的过滤器，第二步设置资源加载对象
 
@@ -1765,6 +1767,38 @@ public void setResourceLoader(@Nullable ResourceLoader resourceLoader) {
 }
 
 ```
+
+##### scan方法
+
+scan(String... basePackages) 扫描给定包路径下的BeanDefinition并注册。并返回本次扫描的数量
+
+```java
+public int scan(String... basePackages) {
+    // <1> 获取扫描前的 BeanDefinition 数量
+    int beanCountAtScanStart = this.registry.getBeanDefinitionCount();
+
+    // <2> 进行扫描，将过滤出来的所有的 .class 文件生成对应的 BeanDefinition 并注册
+    doScan(basePackages);
+
+    // Register annotation config processors, if necessary.
+    // <3> 如果 `includeAnnotationConfig` 为 `true`（默认），则注册几个关于注解的 PostProcessor 处理器（关键）
+    // 在其他地方也会注册，内部会进行判断，已注册的处理器不会再注册
+    if (this.includeAnnotationConfig) {
+        AnnotationConfigUtils.registerAnnotationConfigProcessors(this.registry);
+    }
+
+    // <4> 返回本次扫描注册的 BeanDefinition 数量
+    return (this.registry.getBeanDefinitionCount() - beanCountAtScanStart);
+}
+```
+
+**过程如下：**
+
+- 获取扫描前的BeanDefinition数量
+- 执行doScan方法扫描所有.class文件生成的BeanDefinition并注册
+- 如果 `includeAnnotationConfig` 为 `true`（默认），则注册几个关于注解的 PostProcessor 处理器（关键），在其他地方也会注册，内部会进行判断，已注册的处理器不会再注册。
+
+
 
 
 
