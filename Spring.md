@@ -1749,11 +1749,11 @@ protected void registerDefaultFilters() {
 
 ###### setResourceLoader(resourceLoader)
 
- 第一步加载了默认的过滤器，第二步设置资源加载对象
+ 第一步加载了默认的过滤器，第二步设置资源加载器
 
 - 通过资源加载器生成资源解析器
 - 通过资源加载器生成元数据读取工厂 metadataReaderFactory
-- 设置加载器加载器，并加载出**CandidateComponentsIndex对象**
+- 设置加载器，并加载出**CandidateComponentsIndex对象**
 
 
 
@@ -1797,6 +1797,56 @@ public int scan(String... basePackages) {
 - 获取扫描前的BeanDefinition数量
 - 执行doScan方法扫描所有.class文件生成的BeanDefinition并注册
 - 如果 `includeAnnotationConfig` 为 `true`（默认），则注册几个关于注解的 PostProcessor 处理器（关键），在其他地方也会注册，内部会进行判断，已注册的处理器不会再注册。
+
+##### doScan 方法
+
+
+
+```java
+protected Set<BeanDefinitionHolder> doScan(String... basePackages) {
+    Assert.notEmpty(basePackages, "At least one base package must be specified");
+    // <1> 定义个 Set 集合 `beanDefinitions`，用于保存本次扫描成功注册的 BeanDefinition 们
+    Set<BeanDefinitionHolder> beanDefinitions = new LinkedHashSet<>();
+    for (String basePackage : basePackages) { // 遍历需要扫描的包名
+        // <2> 【核心】扫描包路径，通过 ASM（Java 字节码的操作和分析框架）解析出所有符合条件的 BeanDefinition
+        Set<BeanDefinition> candidates = findCandidateComponents(basePackage);
+        // <3> 对第 `2` 步解析出来的 BeanDefinition 依次处理，并注册
+        for (BeanDefinition candidate : candidates) {
+            // <3.1> 解析出 @Scope 注解的元信息并设置
+            ScopeMetadata scopeMetadata = this.scopeMetadataResolver.resolveScopeMetadata(candidate);
+            candidate.setScope(scopeMetadata.getScopeName());
+
+            // <3.2> 获取或者生成一个的名称 `beanName`
+            String beanName = this.beanNameGenerator.generateBeanName(candidate, this.registry);
+
+            // <3.3> 设置相关属性的默认值
+            if (candidate instanceof AbstractBeanDefinition) {
+                postProcessBeanDefinition((AbstractBeanDefinition) candidate, beanName);
+            }
+
+            // <3.4> 根据这个类的相关注解设置属性值（存在则会覆盖默认值）
+            if (candidate instanceof AnnotatedBeanDefinition) {
+                AnnotationConfigUtils.processCommonDefinitionAnnotations((AnnotatedBeanDefinition) candidate);
+            }
+
+            // <3.5> 检查 beanName 是否已存在，已存在但是不兼容则会抛出异常
+            if (checkCandidate(beanName, candidate)) {
+                // <3.6> 将 BeanDefinition 封装成 BeanDefinitionHolder 对象，这里多了一个 `beanName`
+                BeanDefinitionHolder definitionHolder = new BeanDefinitionHolder(candidate, beanName);
+                // <3.7> 如果代理模式是 `TARGET_CLASS`，则再创建一个 BeanDefinition 代理对象（重新设置了相关属性），原始 BeanDefinition 已注册
+                definitionHolder = AnnotationConfigUtils.applyScopedProxyMode(scopeMetadata, definitionHolder, this.registry);
+                // <3.8> 添加至 `beanDefinitions` 集合
+                beanDefinitions.add(definitionHolder);
+                // <3.9> 注册该 BeanDefinition
+                registerBeanDefinition(definitionHolder, this.registry);
+            }
+        }
+    }
+    // <4> 返回 `beanDefinitions`（已注册的 BeanDefinition 集合）
+    return beanDefinitions;
+}
+
+```
 
 
 
