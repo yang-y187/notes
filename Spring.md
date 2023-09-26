@@ -1800,7 +1800,7 @@ public int scan(String... basePackages) {
 
 ##### doScan 方法
 
-
+这些在线咨询
 
 ```java
 protected Set<BeanDefinitionHolder> doScan(String... basePackages) {
@@ -6576,16 +6576,6 @@ MyBatits的Cache并不专业，可以导入包，实现强大功能
 
 
 ![img](Spring.assets/v2-2644b426ce5de72ac3166297eff08023_720w.jpg)
-
-
-
-
-
-
-
-
-
-
 
 
 
