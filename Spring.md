@@ -1654,7 +1654,7 @@ xml文件中会通过**ClassPathBeanDefinitionScanner** 进行扫描，来获取
 
 #### ClassPathBeanDefinitionScanner
 
-继承了ClassPathScanningCandidateComponentProvider，classpath下BeanDefinition的扫描器，支持设置过滤器。默认三个过滤器**@Component**，javax.annotation.ManagedBean和JSR-330 的 javax.inject.Named注解过滤器
+继承了**ClassPathScanningCandidateComponentProvider**，classpath下BeanDefinition的扫描器，支持设置过滤器。默认三个过滤器**@Component**，javax.annotation.ManagedBean和JSR-330 的 javax.inject.Named注解过滤器
 
 - ClassPathBeanDefinitionScanner 最后调用的都是一个方法
 - 传入注册中心
@@ -1848,7 +1848,9 @@ protected Set<BeanDefinitionHolder> doScan(String... basePackages) {
 
 ```
 
+#### ClassPathScanningCandidateComponentProvider
 
+`org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider`，classpath 下扫描符合条件的 BeanDefinition
 
 
 
