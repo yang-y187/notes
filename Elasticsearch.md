@@ -991,11 +991,52 @@ elasticsearch-head 插件
 
 # 补充知识点
 
+ES也是关系型数据库
+
+ES的mapping中，新增字段后，无法删除，
+
  ES 默认索引一次性最多查询10000条数据。查询第10001条数据则
 
 
 
+- #### ES的list查询，默认返回前10条，要查询更多个数需要指定size
 
 
 
 
+
+## mapping中的Dynamic的三种状态
+
+- ### 构建mapping后，ES默认允许自动新增字段
+
+  - 插入数据，传String后，会默认新增字段，可以设置关闭该功能
+
+功能的配置对应的是mapping中的`dynamic`字段
+
+mapping分为动态映射（dynamic mapping）、静态映射（explicit mapping）和严格映射（strict mappings），查看ES的索引信息时可以看到
+
+```http
+PUT m1
+{
+  "mappings": {
+    "doc":{
+      "dynamic":true,
+      "properties": {
+        "name": {
+          "type": "text"
+        },
+        "age": {
+          "type": "long"
+        }
+      }
+    }
+  }
+}
+
+```
+
+### 动态映射（dynamic: true）
+
+向ES新增mapping中没有的字段，则ES的mapping会新建该字段，并且将该字段存储在ES中
+
+### 静态映射 (dynamic: false)
