@@ -5114,7 +5114,7 @@ Spring原理【[Spring注解](https://www.bilibili.com/video/BV1gW411W7wy?p=1)�
   - bootstrapRegistryInitializers：初始化启动引导器，**（**List<Bootstrapper>**）：去spring.factories文件中找** org.springframework.boot.**==Bootstrapper==**
   - 找==ApplicationContextInitializer==，**去spring.factories文件中找** 
     - List<ApplicationContextInitializer<?>> **initializers**
-  - 找==ApplicationListener==，应用监听器 ，去**spring.factories**找ApplicationListener**
+  - 找==ApplicationListener==，应用监听器 ，去**spring.factories找ApplicationListener**
 
   - - - List<ApplicationListener<?>> **listeners**
 
@@ -5196,7 +5196,7 @@ Spring原理【[Spring注解](https://www.bilibili.com/video/BV1gW411W7wy?p=1)�
 
 ## 注解
 
-- @AliasFor 表示别名：它可以注解到自定义注解的两个属性上，表示这两个互为别名
+- @AliasFor 表示别名：它可以注解到自定义注解的两个属性上，表示这两个互为别名。即两个属性是相同
 
 
 
