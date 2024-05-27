@@ -5,6 +5,7 @@
 - Consumer：RPC调用方
 - Provider：RPC提供方。对外暴露的是接口，实现类Consumer无法直接调用。
 - rpc中间件：Consumer通过rpc中间件调用Provider的接口
+- Provider-Common
 
 
 
@@ -17,6 +18,14 @@
 # Provider
 
 提供调用接口，并实现该方法。
+
+
+
+# Provider-Common
+
+Provider对外暴露的接口在统一在此包内创建。Provider是各种接口实现，不对外暴露。Consumer调用Provider的包时，引用Provider-Common 而不是Provider包
+
+
 
 
 
