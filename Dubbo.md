@@ -87,6 +87,10 @@ java 是**懒加载迭代器**的思想，按需加载。
 
 ### Dubbo SPI 
 
+![image-20240616161044429](Dubbo.assets/image-20240616161044429.png)
+
+Dubbo通过ExtensionLoader获取自定义的加载器。然后获取对应的实现「按需加载」。对应的实现，可以通过 @SPI注解指定 value值，即SPI的路径。「方便了SPI指定路径，即拓展更新方便」
+
 - java spi 缺点
   - 会遍历所有实现，并反射创建实例化。若有的实现类初始化过程缓慢，耗时。而使用者代码没有用到，则造成了资源的浪费
   - 没有使用缓存，每次load，都需要重新加载对象，也增加了启动时间和性能的开销
@@ -100,20 +104,152 @@ java 是**懒加载迭代器**的思想，按需加载。
 
 ## 2、Dubbo工作流程
 
-![/dev-guide/images/dubbo-relation.jpg](Dubbo.assets/dubbo-relation.jpg)
-
-
+![图片](Dubbo.assets/640)
 
 1. Start：启动Spring时，自动启动Dubbo的provider
 2. Register：Dubbo的provider在启动后，会去注册中心注册内容，包括：IP、端口号、接口列表（接口类、方法名）、版本、provider的协议
-3. Subscribe：订阅，Consumer启动时，自动去Register获取到已经注册的provider的信息，并缓存下来
-4. Notify：当Provider的信息发生变更时，自动由Register向Consumer推变更信息，Consumer会更新自己的缓存信息
+3. Subscribe：订阅，Consumer启动时，自动去Register注册中心获取到已经注册的provider的信息，并缓存下来
+4. Notify：当Provider的信息发生变更时，自动由Register注册中心向Consumer推变更信息，Consumer会更新自己的缓存信息
 5. Invoke：Consumer调用Provider中的 方法
-6. Count：次数，每2分钟，Provider和Consumer自动向Monitor 发送访问次数，Monitor进行统计。
+6. Count：次数，每2分钟，Provider和Consumer自动向Monitor 监控中心发送访问次数，Monitor进行统计。
 
 
 
-## 3、 Dubbo 服务调用过程
+**注意**：
+
+- 注册中心和监控中心是可选的，可以没有注册中心和监控中心，Provider的相关信息，可以在Consumer机器的配置文件中写。
+- 注册中心，消费者和生产者都是长连接，和监控方不是长连接。**在调用时，消费者直接调用生产者，不经过注册中心。**
+- 注册中心全部宕机也不会影响已经正常运行的消费者和生产者，因为消费者已经将生产者的相关信息都缓存到本地。
+
+## 3、Dubbo 服务暴露过程
+
+Dubbo 定义URL 作为参数类型
+
+```properties
+protocol://username:password@host:port/path?key=value&key=value
+protocol: dubbo中的各种协议，如dubbo、http等
+username/password：用户名、密码
+host/port:主机端口号
+path:接口名称
+parameters：参数键值对
+```
+
+ServiceBean实现了ApplicationLister，监听ContextRefreshedEvent时间，在Spring IOC容器刷新完成后调用onApplicationEvent方法，服务暴露的启动方法。获取配置的URL信息，再利用Dubbo SPI机制根据URL的参数，选择合适的实现类，实现拓展
+
+通过javassist动态封装服务实现类，统一暴露出Invoker使得调用更方便，屏蔽了底层实现细节，然后封装成Exporter存储起来，等待消费者的调用，并且会将URL注册到注册中心，使得消费者可以获取服务提供者的信息。
+
+一个服务若是有多个协议，则需要暴露多次，即需要向多个注册中心暴露注册。
+
+流程：
+
+1. 检查配置项，如果有些配置空的话会默认创建，组装成URL
+2. 根据URL进行服务暴露，创建代理类Invoker，根据URL得知具体的协议信息，根据Dubbo SPI获取实现类实现Exporter
+3. 如果是本地暴露，则将Exporter存入ServiceConfig的缓存
+4. 远程暴露：先通过Registry协议找到RegistryProtocol 进行Export，将URL中export=dubbo://... 先转换成exporter，然后获取注册中心的相关配置，如果需要注册，则向注册中心配置，并且在ProviderConsumerRegtable这个表格中记录服务提供者，本质是在一个concurrentHashMap中put Invoker，key就是服务接口全限定名，value是一个Set，Set里面是包装过的Invoker，根据URL上的Dubbo协议暴露出Exporter，**打开Server调用NettyServer监听服务**（本地暴露不需要打开）
+
+
+
+
+
+
+
+
+
+## 4、Dubbo服务引用过程
+
+引入过程分为饿汉式和懒汉式。
+
+1. 饿汉式：通过调用ReferenceBean的afterPropertiesSet方法，引入服务。（即通过配置文件配置启动）
+2. 懒汉式：当这个服务被注入到其他类时，才启动引用流程。【用到该服务才引入】默认使用懒汉式。
+
+ReferencgetBean 实现了FactoryBean接口，当任何服务Interface进行注入或者getBean获取时，最后都会调用getObject的服务调用过程，分为三种方式。
+
+- 本地引入，则走injvm协议，直接从服务暴露的缓存中获取exporter
+- 直连远程服务（未使用注册中心，消费者配置文件中指定各个Provider信息），直连即可
+- 注册中心引入远程服务，Consumer通过注册中心得知Provider的相关信息，然后进行服务的引入
+  - 获取注册中心实例，向注册中心注册自身应用，并且订阅Providers、configurations、routers节点，触发DubboInvoker的生成，cluster（集群）将多个服务调用者进行封装，返回一个invoker。cluster负责决定负载均衡，Consumer调用时，具体访问哪台机器
+
+引入过程：通过配置创建一个map，然后通过map，构建URL信息「IP、端口号、接口列表（接口类、方法名）、版本、provider的协议」，再通过URL上的协议，利用自适应拓展机器调用对应的protocol.refer得到对应的invoker。然后再构建代理，封装invoker返回服务引用。Consumer调用时，都是调用这个invoker。
+
+invoker 分为多种：本地引入的invoker、直连的invoker、注册中心集群的invoker。「即使有多个Provider，服务引入时，也是获取一个invoker」
+
+## 5、Dubbo 服务调用过程
+
+1. 调用某个接口的方法，调用服务引入时生成的代理类。然后会从cluster中经过路由的过滤、负载均衡机制选择一个invoker发起远程调用，此时会记录该请求和请求ID等待服务端的响应。
+2. 服务端接收到请求后，通过参数获取到之前暴露的map，得到对应的exporter，然后最终调用真正的实现类，再组装好结果返回，响应会携带上请求时的ID。
+3. 消费者收到响应后，通过该请求ID，找到对应的请求，将响应放在对应的Future，唤醒等待的线程，并且响应。
+
+
+
+## 6、Dubbo的分层设计
+
+![图片](Dubbo.assets/640-20240616161826339)
+
+- Service：业务层，技术开发的业务逻辑层
+- Config：配置层，根据ServiceConfig和ReferenceConfig，初始化配置信息
+- Proxy：代理层，服务提供者还是消费者都会生成一个代理类，是的服务接口透明化，代理层做远程调用和返回结果
+- Register：注册层，向注册中心注册和发现
+- Cluster：路由和集群容错层，服务选取具体调用的节点信息，处理特殊的调用要求和负责远程调用失败的容错措施
+- Monitor：监控层，负责向监控统计调用时间、次数、可用率等信息
+- Portocol：远程调用层，主要是封装RPC调用，负责管理Invoker
+- Exchange：信息交换层，用来封装请求响应，同步转异步
+- Transport：网络传输层，抽象了网络传输的统一接口，Netty、Mina等
+- Serialize：序列化层，将数据序列化成二进制流和反序列化
+
+
+
+## 7、Dubbo 服务 负载均衡策略
+
+1. 平衡加权轮询算法
+2. 加权随机算法
+3. 一致性哈希算法
+4. 最小活跃数算法
+
+
+
+## 8、zk如何存储Dubbo生产者和消费者信息
+
+zk一个多叉树，类似文件目录结构。
+
+生产者消费者启动，都是在zk中注册
+
+- key ：接口全类名
+- value：Provider和Consumer
+  - Provider包含多个URL，即多个不同的提供方
+
+zk会对Provider和Consumer加入watcher，可以拉取所有值。且都是临时提供者，若是Provider1宕机，则通过心跳监测到该机器无响应，则删除Provider1的URL信息。
+
+
+
+## 9、Spring Cloud 和Dubbo的区别
+
+- 底层协议：SpringCloud基于http协议，dubbo基于Tcp协议，dubbo的性能相对较好
+- 注册中心：Spring Cloud 使用的eureka，dubbo推荐使用zookeeper「eureka AP 是高可用性的，zk  CP保证了数据的强一致性，zk要求数据超过半数的节点是一致的，否则会进入崩溃恢复」CAP
+- 模型定义：dubbo将一个接口定义为一个服务，SpringCloud 则是将一个应用定义为一个服务
+- SpringCloud提供了一个生态，而Dubbo是SpringCloud中关于服务调用的一种解决方案（服务治理）
+
+
+
+## 10、zk集群挂掉，发布者和订阅者还能通信吗，若是发布者呢
+
+可以，启动dubbo容器时，消费者会去zookeeper拉取注册的发布者的信息，进行本地缓存，调用时以负载均衡策略，从本地获取某一台机器，但zookeeper挂掉后，后续新的生产者，无法被消费者调用
+
+- 若服务发布者，无状态，则RPC调用失败后，会调用其他机器，后续路由选择时，不会再次选中该台机器
+- 若服务发布者全部宕机，服务消费者无法使用，并且无限次重连，等待服务者恢复
+
+
+
+
+
+
+
+
+
+
+
+
+
+## RPC和Dubbo的区别
 
 
 
