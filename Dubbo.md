@@ -21,7 +21,7 @@ Dubbo是一款RPC服务开发框架，用于解决微服务架构下的服务治
 
 # 面试
 
-## 为什么Dubbo不用jdk的SPI，而是要自己实现？
+## 1、为什么Dubbo不用jdk的SPI，而是要自己实现？
 
 ### java SPI
 
@@ -85,13 +85,35 @@ java 是**懒加载迭代器**的思想，按需加载。
 
 
 
+### Dubbo SPI 
+
+- java spi 缺点
+  - 会遍历所有实现，并反射创建实例化。若有的实现类初始化过程缓慢，耗时。而使用者代码没有用到，则造成了资源的浪费
+  - 没有使用缓存，每次load，都需要重新加载对象，也增加了启动时间和性能的开销
+
+- Dubbo spi
+  - 每个实现类都配置了名字，通过名字去文件里找对应的实现类，并实例化，按需加载
+  - 增加了缓存存储实例，提高了读取性能
+  - 提供了对Spring中IOC和AOP的支持，方便了拓展
 
 
 
+## 2、Dubbo工作流程
+
+![/dev-guide/images/dubbo-relation.jpg](Dubbo.assets/dubbo-relation.jpg)
 
 
 
+1. Start：启动Spring时，自动启动Dubbo的provider
+2. Register：Dubbo的provider在启动后，会去注册中心注册内容，包括：IP、端口号、接口列表（接口类、方法名）、版本、provider的协议
+3. Subscribe：订阅，Consumer启动时，自动去Register获取到已经注册的provider的信息，并缓存下来
+4. Notify：当Provider的信息发生变更时，自动由Register向Consumer推变更信息，Consumer会更新自己的缓存信息
+5. Invoke：Consumer调用Provider中的 方法
+6. Count：次数，每2分钟，Provider和Consumer自动向Monitor 发送访问次数，Monitor进行统计。
 
+
+
+## 3、 Dubbo 服务调用过程
 
 
 
