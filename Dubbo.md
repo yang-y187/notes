@@ -146,13 +146,12 @@ ServiceBean实现了ApplicationLister，监听ContextRefreshedEvent时间，在S
 2. 根据URL进行服务暴露，创建代理类Invoker，根据URL得知具体的协议信息，根据Dubbo SPI获取实现类实现Exporter（Exporter 是对外交互的对象，与注册中心交互、Consumer交互）
 3. 暴露接口：export
    1. 如果是本地暴露（injvm协议），则将Exporter存入ServiceConfig的缓存
-   2. 远程暴露：先通过Registry协议找到RegistryProtocol 进行Export，将URL中export=dubbo://... 先转换成exporter，然后获取注册中心的相关配置，如果需要注册，则向注册中心配置，并且在ProviderConsumerRegtable这个表格中记录服务提供者，本质是在一个concurrentHashMap中put Invoker，key就是服务接口全限定名，value是一个Set，Set里面是包装过的Invoker，根据URL上的Dubbo协议暴露出Exporter，**打开Server调用NettyServer监听服务**（本地暴露不需要打开）
+   2. 远程暴露：先通过Registry协议找到RegistryProtocol 进行Export，将URL中export=dubbo://... 先转换成exporter，然后获取注册中心的相关配置，如果需要注册，则向注册中心配置，并且在ProviderConsumerRegtable这个表格中记录服务提供者，本质是在一个concurrentHashMap中put Invoker，key就是服务接口全类名+端口号，value是一个Set，Set里面是包装过的Invoker，根据URL上的Dubbo协议暴露出Exporter，**打开Server调用NettyServer监听服务**（本地暴露不需要打开）
 
 
 
 - 为什么搞本地暴露
   - 暴露的本地服务在内部调用的时候可以直接消费同一个JVM服务，避免了网络通信
-- 
 
 
 
@@ -181,6 +180,26 @@ ReferencgetBean 实现了FactoryBean接口，当任何服务Interface进行注�
 
 引入过程：通过配置创建一个map，然后通过map，构建URL信息「IP、端口号、接口列表（接口类、方法名）、版本、provider的协议」，再通过URL上的协议，利用自适应拓展机器调用对应的protocol.refer得到对应的invoker。然后再构建代理，封装invoker返回服务引用。Consumer调用时，都是调用这个invoker。
 
+- 引入过程
+  - 通过Spring读取配置配置文件配置，将通过各个配置项构建成Map信息
+  - 通过Map构建动态代理，最终是通过invoker进行构建，实际是对Invoker的封装
+    - 构建URL信息
+      - 首先判断是否走inJvm协议，本地引用，若是本地引用，则从JVM内存中获取
+      - 远程引用分为直连和通过注册中心获取。判断URL是否是直连链接，若不是，则走注册中心引入远程服务
+      - 走注册中心，则从注册中心获取Provider的地址等信息，将这些信息拼接到URL对象中。Provider可能有多个，所以可能生生成多个URL对象（一个provider对应一个URL）
+    - 通过URL构建Invoker
+      - 若是只有一个URL，则直接构建URL信息
+      - 若是存在多个URL，则先遍历构建多个Invoker，再通过Cluster【进行负载均衡】进行合并，只暴露出一个Invoker。
+      - 调用RegistryProtocol#refer，构建Invoker
+        - 根据URL，获取注册中心实例【注册中心变更监听通过该注册中心实例同步】
+        - 生成消费者的链接，并注册到注册中心
+        - 订阅注册中心的Providers目录、configurators目录、routers目录。若订阅的信息发生变化，会同步该Invoker。
+        - 创建Invoker，包含netty client（通过网络通信）、通过cluser封装Invoker，使其只暴露一个Invoker。\
+
+
+
+
+
 invoker 分为多种：本地引入的invoke、直连的invoker、注册中心集群的invoker。「即使有多个Provider，服务引入时，也是获取一个invoker」Invoker 代表一个可执行体。Invoker屏蔽了调用细节，暴露出一个统一的执行体。
 
 
@@ -197,6 +216,28 @@ invoker 分为多种：本地引入的invoke、直连的invoker、注册中心�
 1. 调用某个接口的方法，调用服务引入时生成的代理类Proxy。Proxy调用invoke方法，需要从本地缓存获取可远程调用的invoke列表。然后会从cluster中经过路由的过滤、负载均衡机制选择一个invoker发起远程调用，再通过Client进行数据传输。传输过程还需要Codec进行做协议改造，再序列化。此时会记录该请求和请求ID等待服务端的响应。
 2. 服务端接收到请求后，通过参数获取到之前暴露的map，得到对应的exporter，然后最终调用真正的实现类，再组装好结果返回，响应会携带上请求时的ID。
 3. 消费者收到响应后，通过该请求ID，找到对应的请求，将响应放在对应的Future，唤醒等待的线程，并且响应。
+
+
+
+- Dubbo协议
+  - 使用的handler+body的方式。协议头16字节，包含协议版本、接口名字、接口版本、方法名字、requestID等信息
+- 序列化协议
+  - dubbo默认采用hessian2 序列化协议。数据紧凑，占用字节少，传输快。缺点：调试困难，读取需接口特殊工具转换
+
+
+
+- 调用流程（客户端）
+  - 请求过程
+    - 调用具体的接口会生成代理类，代理类会生成一个RpcInvocation对象，调用Invoker方法。通过反射调用该方法。
+    - 通过方法名获取提供支持的Invokers，再通过负载均衡的计算，得到一个Invoker。若是配置了服务降级，则会获取到mockInvoker，执行特定的逻辑。
+    - 通过Invoker构建request，dubbo内部默认是异步调用，调用请求，返回Future
+    - 请求成功后，如何根据相应，找到对应的请求？ 请求会携带requestId，返回时也根据该requestId进行对应。有一个currentHashMap，将requestId和请求的future进行存储，方便对应。
+  - 响应过程
+    - 根据响应response携带的requestId从currentHashMap中找到对应的future。
+    - 将future塞入response，唤醒等待线程
+- 调用流程（服务端）
+  - 解析request，获取requestId和请求数据信息
+  - 获取对应的provider中的Invoker。【通过请求的接口全类名和端口号拼接成serviceKey， 在map中获取Invoker。该map是在启动暴露时，存再map中的】
 
 
 
