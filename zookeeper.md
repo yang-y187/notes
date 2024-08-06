@@ -86,3 +86,8 @@ Leader 领导者、Follower 跟随者、Observer 观察者。统称为zkService
 - Observer：没有选举权和被选举权的Follower
 
 ZAB的协议，则是对该三种角色的协议，分为 **消息传播**和**崩溃恢复**
+
+
+
+## 3.2 ZXID和myid
+
