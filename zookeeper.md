@@ -91,3 +91,25 @@ ZAB的协议，则是对该三种角色的协议，分为 **消息传播**和**�
 
 ## 3.2 ZXID和myid
 
+**zxid**
+
+zookeeper采用全局递增的事物Id来标识。所有的变更发生时都会有一个Zookeeper Transaction Id。ZXID 是64位的Long类型。**各个角色根据该Id保证事务顺序一致性。**ZXID 高32位表示纪元epoch，低32位表示xid。
+
+![在这里插入图片描述](zookeeper.assets/cfb646b6c1cf54c061c7435942411d80.png)
+
+- 每个leader 都会有不同的epoch值。表示一个朝代。从1开始，每次新的选举，选出新的leader后，epoch递增1。并且将该值更新到所有zkService的epoch。
+- xid是一个递增的事务编号。数值越大说明数据越新。每次epoch变化，都将低32位的xid重置。
+
+**myid**
+
+每个Zookeeper服务器都会在数据文件夹下创建myid的文件，这个文件包含整个Zookeeper集群的唯一性ID（整数）.
+
+
+
+### 3.3 历史队列
+
+每个follower节点都会有一个先进先出（FIFO）队列用来存放收到的事物请求，保证事物的顺序。
+
+- 可靠提交由ZAB的事务一致性协议保证
+- 全局有序由TCP协议保证
+- 因果有序由follower的历史队列(history queue)保证
