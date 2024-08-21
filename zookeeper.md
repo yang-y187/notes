@@ -113,3 +113,34 @@ zookeeper采用全局递增的事物Id来标识。所有的变更发生时都会
 - 可靠提交由ZAB的事务一致性协议保证
 - 全局有序由TCP协议保证
 - 因果有序由follower的历史队列(history queue)保证
+
+
+
+### 3.4 消息广播模式
+
+消息广播就是ZkService如何处理写请求和数据同步。
+
+**ZAB协议两种模式：消息广播模式和崩溃恢复模式。**
+
+![在这里插入图片描述](zookeeper.assets/eafeea1c853a67ac5c6181ac81b2f1a1.png)
+
+- ### 写请求
+
+ZkService收到写请求后，转发到Leader。Leader根据写请求，询问所有的Follower是否同意更新，要是超过半数同意，则将Follower和Observer更新。**数据同步是保证事务的顺序一致性的。**根据版本的Id  ZXID进行有序同步
+
+![在这里插入图片描述](zookeeper.assets/8daca995415d58496bfa389f4203a655.png)
+
+1. Zkserver收到写请求转发到 leader
+2. leader生成一个新的事务，并生成ZXID。
+3. Leader 将事务发给所有的Follower，携带ZXID作为一个提案（propose）分发给所有Follower
+4. follower节点将收到的事务请求加到历史队列（history queue）中，当follower收到提案propose，现将propose写到磁盘，完成后再回复leader一个ACK。
+5. 当leader收到超过半数的follower的ack消息，leader向follower发送commit请求（leader自身也需要提交事务）
+6. 当follower收到commit请求后，判断当前事务的ZXID是否比历史队列里的事务ZXID都小。如果是则执行该事务。若不是则等待比它更小的事务的执行（保证有序性）
+7. Leader将执行结果返给客户端
+
+
+
+**过半成功策略**
+
+
+
