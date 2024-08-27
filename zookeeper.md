@@ -142,5 +142,24 @@ ZkService收到写请求后，转发到Leader。Leader根据写请求，询问�
 
 **过半成功策略**
 
+Leader节点接收到写请求后，Leader将会把写请求广播给各个server。各个Server将该写请求加入到历史队列，并向Leader发送Ack信息。收到超过半数的Ack信息后，说明该操作可以执行。Leader会向各个Server提交commit消息，各个Server收到消息后执行操作
+
+- Leader不需要得到Observer的Ack（Observer无投票权）
+- Leader不需要得到所有Follower的Ack，只需要得到一半即可（Leader本身对自己就有一个Ack）
+- Observer虽然无投票权，但仍同步Leader数据，从而在处理读请求时，可以返回新数据
+
+
+
+- Follower 和Observer都有可能收到写请求，zkserver收到请求后，将该请求转发到Leader
+- 无论是Follower和Observer，都会执行commit命令，即写请求
+
+读请求的话，任何zkServer都可以处理，在本地内存中读取
+
+
+
+### 3.5 崩溃恢复模式
+
+ 崩溃恢复模式分为四步：选举、发现、同步、广播
+
 
 
