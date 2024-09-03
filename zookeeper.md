@@ -106,7 +106,7 @@ zookeeper采用全局递增的事物Id来标识。所有的变更发生时都会
 
 
 
-### 3.3 历史队列
+## 3.3 历史队列
 
 每个follower节点都会有一个先进先出（FIFO）队列用来存放收到的事物请求，保证事物的顺序。
 
@@ -116,7 +116,7 @@ zookeeper采用全局递增的事物Id来标识。所有的变更发生时都会
 
 
 
-### 3.4 消息广播模式
+## 3.4 消息广播模式
 
 消息广播就是ZkService如何处理写请求和数据同步。
 
@@ -157,10 +157,28 @@ Leader节点接收到写请求后，Leader将会把写请求广播给各个serve
 
 
 
-### 3.5 崩溃恢复模式
+## 3.5 崩溃恢复模式
 
  崩溃恢复模式分为四步：选举、发现、同步、广播
 
 1. 选举阶段：当Leader崩溃后，集群进度选举阶段，选出准leader
-2. 发现阶段：
+2. 发现阶段：从各个节点中发现最新的ZXID和事务日志。准Leader接收所有Follower的各自的epoch值。Leader从中选取最大的epoch + 1，将新值发给各个Follower。Follower回应Ack给Leader，带上各自最大的ZXID和存储的信息。Leader选取最大的ZXID，并更新自身历史日志。Leader有了最新的提议历史（每次epoch变化时，ZXID重新从0开始）
+3. 同步阶段：Leader获取到最新的提议历史，则同步所有Follower。超过半数Follower同步成功，准Leader才成为正式Leader。（再同步提议时，follower只同步zxid比自己lastZxid大的提议）
+4. 广播阶段：集群恢复到广播模式，开始接受客户端的写请求。
 
+
+
+- **Leader被选为主节点后，已经是最新的数据，为什么还要从各节点寻找最新的事务？**
+
+  - **确保已经被Leader提交的提案最终被所有Follower提交**
+
+    - Leader(server2)发送了commit请求，然后发给server3，还没发给server1时，挂了。若选举server1作为新Leader，则server2收到的commit请求，则会被丢弃。
+    - **在选举时，比较ZXID**，只有最新的server3当选Leader。当前Leader后，将最新的Leader同步到Follower。若是server2恢复，则作为Follower加入集群
+
+    ![在这里插入图片描述](zookeeper.assets/941001e25663ddf3a304190acf12f5c1.png)
+
+  - **确保跳过那些已经被丢弃的提案**
+    - Leader（server2）统一了提案N1,自身提交了提议，没提交到server1和server3时挂了。无论是server1还是server3选举成Leader。server2恢复后作为Follower加入集群，同步Leader的提案历史，sever2的提案N1会被丢弃。
+      ![在这里插入图片描述](zookeeper.assets/1322c36948cb00bfa4a3d22673f687d2.png)
+
+## 3.6 脑裂问题
