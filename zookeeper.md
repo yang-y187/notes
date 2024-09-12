@@ -191,11 +191,40 @@ ZAB为解决脑裂问题，要求集群内的结点数量为2N+1，当网络分�
 
 
 
+# 4、Zookeeper 选举机制
+
+leader选举可以分为两个种
+
+1. leader 宕机重新选举新的leader
+2. Zookeeper新启动，需要初始化选举出一个leader
+
+**选举阶段**
+
+- looking：不确定leader的状态，该状态下的zk认为没有leader，会发起leader选举
+- following：跟随者状态，明确一台机器为leader，当前服务器作为跟随者
+- leading：领导者状态，明确当前机器为领导者，会与following维持心跳
+- observing：观察者状态，与following相似，但是不参与选举，也不参与集群写操作的投票
 
 
 
+## 4.1 初始化选举
+
+假设三台机器myid为 1、2、3
+
+1. 机器1 启动，发起选举，会投给自己，投票内容为**（myid，ZXID）**，初始化时，ZXID为0，此时Server1 只能收到1票，不够半数以上，则无法选举为leader。该状态为looking
+
+2. 机器2启动，发起选举，会投给自己，投票内容为（2,0），并将投票消息广播出去（Server1 机器也会广播，不过是只有一台机器，所以广播无效）。Server1 收到Server2 的投票信息后：
+
+   - **首先会对比ZXID，ZXID大的优先为leader；**
+   - **若ZXID相同，则对比myid，myid大的优先为leader**
+
+   因此，Server1 选举Server2 为leader。超过半数票，Server2 状态变更为leading，Server1 状态变更为following
+
+3. 机器3启动，发现Server1和Server2 都不为looking状态，则直接以following的身份加入集群
 
 
+
+## 4.2 运行时选举
 
 
 
