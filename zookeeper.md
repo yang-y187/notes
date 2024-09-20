@@ -226,11 +226,18 @@ leader选举可以分为两个种
 
 ## 4.2 运行时选举
 
+运行时如果Leader节点崩溃，会走崩溃恢复模式，**新leader选出前会暂停对外服务**，大致分为四个阶段：选举、发现、同步、广播
 
+1. Leader宕机，剩下的两个Follower的状态由Following变为Looking状态，每个Server会发出一个投票，第一次都是投给自己，投票内容为（myid，ZXID）。因为是运行时选举，zxid可能不为0
+2. 服务器收集各个服务器的投票
+   - 优先比较ZXID，然后比较myid，大的优先
+   - 统计投票，只有超过半数的机器收到同样的投票信息，才可以确定leader
+3. Follower的状态由Looking分别变更为Leading和Following
+4. 然后依次进去发现、通过、广播节点  （见3.5 崩溃恢复模式）
 
+假设集群有三台服务器，`Leader (server2)`挂掉了，只剩下server1和server3。 `server1` 给自己投票为(1,99)，然后广播给其他 `server`，`server3` 首先也会给自己投票(3,95)，然后也广播给其他 `server`。`server1` 和 `server3` 此时会收到彼此的投票信息，和一开始选举一样，他们也会比较自己的投票和收到的投票（`zxid` 大的优先，如果相同那么就 `myid` 大的优先）。这个时候 `server1` 收到了 `server3` 的投票发现没自己的合适故不变，`server3` 收到 `server1` 的投票结果后发现比自己的合适于是更改投票为(1,99)然后广播出去，最后 `server1` 收到了发现自己的投票已经超过半数就把自己设为 `Leader`，`server3` 也随之变为 `Follower`。
 
-
-
+## 5 Zookeeper 数据模型
 
 
 
