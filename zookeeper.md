@@ -241,7 +241,32 @@ leader选举可以分为两个种
 
 # 5、Zookeeper 数据模型
 
+ZooKeeper 数据模型  采用层次化的多叉树结构，每个数据节点（znode）上的都可以存储数据。数据可以是 数字、字符串 或者布尔值。最上层是根节点 以 `/`代表。
 
+znode是ZK数据的最小单元，每个znode都一个唯一的路径标识。**Zookeeper 主要是用来协调服务的，而不是用来存储业务数据的，这种特性使得Zookeeper不能存放大量的数据，每个节点的存放数据上线是1M。**
+
+Zookeeper能自由的增加、删除znode，类似文件系统，znode默认有四种类型：
+
+- 持久化目录节点 Persistent：客户端与Zookeeper断开连接后，该节点依旧存在
+- 持久化顺序编号目录节点 PERSISTENT_SEQUENTIAL：客户端与Zookeeper断开连接后，该节点依旧存在，Zookeeper 给该节点名称进行了编号
+- 临时目录节点 EPHEMERAL：客户端与Zookeeper断开连接后，该节点被删除
+- 临时顺序编号目录节点 EPHEMERAL_SEQUENTIAL：客户端与zookeeper断开连接后，该节点被删除，只是Zookeeper给该节点名称进行顺序编号。
+
+Znode的数据信息
+
+| znode 状态信息 | 解释                                                         |
+| -------------- | ------------------------------------------------------------ |
+| cZxid          | create ZXID，即该数据节点被创建时的事务 id                   |
+| ctime          | create time，znode 被创建的毫秒数(从1970 年开始)             |
+| mZxid          | modified ZXID，znode 最后更新的事务 id                       |
+| mtime          | modified time，znode 最后修改的毫秒数(从1970 年开始)         |
+| pZxid          | znode 最后更新子节点列表的事务 id，只有子节点列表变更才会更新 pZxid，子节点内容变更不会更新 |
+| cversion       | znode 子节点变化号，znode 子节点修改次数，子节点每次变化时值增加 1 |
+| dataVersion    | znode 数据变化号，节点创建时为 0，每更新一次节点内容(不管内容有无变化)该版本号的值增加 1 |
+| aclVersion     | znode 访问控制列表(ACL )版本号，表示该节点 ACL 信息变更次数  |
+| ephemeralOwner | 如果是临时节点，这个是 znode 拥有者的 sessionid。如果不是临时节，则 ephemeralOwner=0 |
+| dataLength     | znode 的数据长度                                             |
+| numChildren    | znode 子节点数量                                             |
 
 
 
