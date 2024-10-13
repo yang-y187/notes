@@ -1,3 +1,5 @@
+学习文档：https://wxler.github.io/2021/03/01/175946/#7-zookeeper%E7%9B%91%E5%90%AC%E9%80%9A%E7%9F%A5%E6%9C%BA%E5%88%B6
+
 # 前言 ZNode
 
 Paxos描述了这样一个场景，有一个叫做Paxos的小岛(Island)上面住了一批居民，岛上面所有的事情由一些特殊的人决定，他们叫做议员(Senator)。议员的总数(Senator Count)是确定的，不能更改。岛上每次环境事务的变更都需要通过一个提议(Proposal)，每个提议都有一个编号(PID)，这个编号是一直增长的，不能倒退。每个提议都需要超过半数((Senator Count)/2 +1)的议员同意才能生效。每个议员只会同意大于当前编号的提议，包括已生效的和未生效的。如果议员收到小于等于当前编号的提议，他会拒绝，并告知对方：你的提议已经有人提过了。这里的当前编号是每个议员在自己记事本上面记录的编号，他不断更新这个编号。整个议会不能保证所有议员记事本上的编号总是相同的。现在议会有一个目标：保证所有的议员对于提议都能达成一致的看法。
@@ -267,6 +269,287 @@ Znode的数据信息
 | ephemeralOwner | 如果是临时节点，这个是 znode 拥有者的 sessionid。如果不是临时节，则 ephemeralOwner=0 |
 | dataLength     | znode 的数据长度                                             |
 | numChildren    | znode 子节点数量                                             |
+
+
+
+# 6、Zookeeper 监听通知机制
+
+watcher监听机制，监听Zookeeper上节点的变化，绑定监听事件，监听节点数据的变更、节点删除、状态变更等。通过该机制，可以实现基于Zookeeper分布式锁、集群管理。
+
+watcher监听机制：**客户端想服务端注册指定的watcher，当服务端符合了watcher指定的某些事件，则想客户端发送事件通知，客户端收到通知后找到自己定义的watcher然后执行相应的回调方法。**
+
+客户端在Zookeeper上某个节点监听了事件，事件被触发后，Zookeeper会通过回调函数的方式通知客户端，但后续即使再次满足事件要求都不会发消息通知（watcher是一次性操作），可以通过循环监听达到永久监听的效果。
+
+
+
+## Watcher机制过程
+
+1. 客户端注册watcher，注册方式：getData，exists，getChildren
+2. 服务器处理watcher
+3. 客户端回调watcher客户端
+
+## 流程
+
+![在这里插入图片描述](zookeeper.assets/bb2d3b4f606df047afab41614726cc9f.png)
+
+1. 有个main主线程，连接Zookeeper
+2. main线程创建zkClient，此动作创建了两个线程：一个负责网络连接通信（connect），一个负责监听（listener）
+3. 通过connect线程连接服务端，将注册的监听事件发送给Zookeeper
+4. 在Zookeeper的监听事件列表中将注册的监听事件添加到表中
+5. Zookeeper监听到有数据或者路径变化，将该消息发给listener线程
+6. listener线程内部调用了process()方法
+
+
+
+
+
+# 7、Zookeeper 会话（session）
+
+session 是Zookeeper服务端与客户端的一个TCP长连接。默认端口 218。
+
+会话包括：全局的会话状态变化、创建会话、会话管理 三个方面
+
+
+
+## 会话状态
+
+session 会话状态包括 
+
+- connecting：连接中
+- connected：已连接
+- closed：已关闭
+
+客户端通过 `host1 : port,host2: port ,host3:port`连接服务器，客户端状态变更为connecting。在成功连接后，状态变更为connected。网络中断之类的操作，客户端会重新从connected变为connecting。若是连接过程中，出现连接超时、权限检查失败等，则状态变更为close。
+
+
+
+## 会话ID的生成
+
+- sessionID：会话的ID会唯一标识，全局唯一
+- TimeOut：指定连接服务器的最长连接时间。
+- ExpirationTime：过期时间。TimeOut是相对时间，ExpirationTime是一个绝对时间。但计算方式不是 `ExpirationTime = CurrentTime + Timeout`，后续会讲解。
+- TickTime：下一次会话超时时间点，为了便于Zookeeper对会话实行分桶策略管理，同时为了高效低耗地实现会话的超时检查与清理。Zookeeper会为每个会话标记一个下次会话的超时时间点，TickTime是一个13位的Long类型数值，一般情况下该值接近TimeOut，但不完全相等
+- isCloseing：用来标记当前会话是否处于被关闭的状态。如果服务端检测到当前会话的超时时间，则将isCloseing属性标记为已关闭，再有该会话的请求都不会处理
+
+**SessionID的生成：**
+
+Session保证了集群环境下全局唯一性标识
+
+SessionTracker初始化时，会调用**initializeNextSession**方法初始化SessionID
+
+
+
+```java
+public static long initializeNextSession(long id ) {
+    long nextSid = 0;
+    nextSid = (System.currentTimeMillis() << 24) >>> 8;
+    nextSid=nextSid|(id << 56);
+    return nextSid;
+}
+```
+
+二进制
+
+1. 获取当前毫秒数，左移24位，右移8位。即获取的数据扩大了2^16次方，且高8位为0。
+2. id一般为myid 当前zkserver的id，上述右移8位后，表明前8为myid值。
+
+因此：SessionId 是通过高8位确定zkServer所在的机器，后56位按照当前毫秒随机。
+
+有个问题是：若时间过大，则向左移24位，高1位为1，就是负数了，因此向右移8位时，需要是无符号移位 >>>。
+
+> 在java中最高位为1时表示负数，为0表示正整数
+
+上面`>>>`为无符号右移，当目标是负数时，**在移位时忽略符号位，空位都以0补齐，这样就保证了结果永远是正数**。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
