@@ -363,9 +363,33 @@ public static long initializeNextSession(long id ) {
 
 
 
+## SessionTracker与ClientCnxn
 
+SessionTracker：Zookeeper的会话管理器，负责整个zk生命周期中会话的创建、管理和清理工作。
 
+会话在SessionTracker保存了三个数据结构：
 
+```java
+protected final ConcurrentHashMap<Long, SessionImpl> sessionsById =
+    new ConcurrentHashMap<Long, SessionImpl>();
+private final ConcurrentMap<Long, Integer> sessionsWithTimeout;
+```
+
+1. SessionWithTimeOut 是一个concurrentHashMap类型的数据结构，用来管理会话的超时时间，该参数会持久化到快照文件中
+2. SessionById是一个HashMap类型的数据结构，用于根据SessionId来管理Session实体
+3. SessionSets是一个HashMap类型的数据结构，用于会话超时的归档，便于进行会话会话恢复和管理
+
+**ClientCnxn**： Zookeeper客户端的核心工作类，负责维护客户端与服务端之间的网络连接进行一系列网络通信，
+
+包含两个线程：
+
+- SendThread：一个I/O线程，主要负责Zookeeper客户端和服务端之间的网络I/O通信
+  - SendThread维护了客户端与服务端之间的会话周期，其以固定的频率向服务端发送一个ping心跳包来保持链接；
+  - SendThread管理了客户端所有请求发送和响应接收操作；
+  - 客户端调用方转换成相应的请求协议并发送给服务端，并完成对同步调用和异步调用的回调；
+  - 将服务端的事件传递给EventThread去处理
+- EventThread：事件线程，主要负责对服务端事件进行处理
+  - 
 
 
 
