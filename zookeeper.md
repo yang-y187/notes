@@ -16,7 +16,7 @@ Paxos描述了这样一个场景，有一个叫做Paxos的小岛(Island)上面�
 
 # 1、ZooKeeper 简介
 
-- Zookeeper主要服务于分布式系统，用来，统一配置管理、统一命名管理、分布式锁和集群管理
+- Zookeeper主要服务于分布式系统，用来，统一配置管理、统一命名管理（注册中心）、分布式锁和集群管理
 - ZooKeeper作为分布式的中间件解决了分布式系统中无法避免的对结点管理的问题（需要实时感知结点的状态、对节点进行统一管理等等）
 
 
@@ -388,8 +388,265 @@ private final ConcurrentMap<Long, Integer> sessionsWithTimeout;
   - SendThread管理了客户端所有请求发送和响应接收操作；
   - 客户端调用方转换成相应的请求协议并发送给服务端，并完成对同步调用和异步调用的回调；
   - 将服务端的事件传递给EventThread去处理
-- EventThread：事件线程，主要负责对服务端事件进行处理
-  - 
+- EventThread：事件线程，主要负责对服务端事件进行处理，并触发客户端注册的watcher监听
+  - EventThread有一个waitingEvent队列，用于存放那些需要被触发的object，包括那些客户端注册的watcher和异步接口中注册的回调器AsyncCallback。
+  - EventThread不断从waitingEvents队列中取出object。实现对事件的触发和回调
+
+
+
+ClientCnxn有两个核心队列：outgoingQueue、pendingQueue,。都是客户端的队列。
+
+- outgoing队列：客户端的请求发送队列，存储那些客户端需要发送到服务端的集合
+- pendingQueue：服务端响应等待队列，那些已经又客户端发送给服务端的，等待服务端响应的集合
+
+
+
+**发送请求**
+
+- outgoingQueue队列中按先进先出的顺序，取出一个可发送的Packet对象，同时生成一个客户端请求序号XID并将其设置到Packet请求头中，然后将其序列化发送
+- 请求发送完毕后，将请求Packet保存到pendingQueue队列中，等待服务端响应返回后，返回给客户端
+
+![img](zookeeper.assets/20210309224615.jpg)
+
+
+
+## 会话创建
+
+1. Client随机选一个服务端地址列表提供的地址，委托给ClientCnxnSocket创建与zk之间的TCP长连接
+2. SendThread会根据当前客户端的设置，创建一个连接请求，，客户端会将该请求包装成网络IO的Packet对象，放入请求队列-outgoingQueue队列中去
+3. ClientCnxnSocket从outgoingQueue中取出Packet对象，将其序列化成ByteBuffer，向服务器发送请求
+4. 服务端收到请求后，服务端SessionTracker为该会话分配一个sessionId，并发送响应
+5. Client收到响应后，首先判断客户端状态是否已初始化，如果未完成初始化，则该响应是会话创建的相应，则交由ConnectResult方法处理该请求
+6. 客户端ClientCnxnSocket会对服务端响应反序列化，得到ConnectResponse对象，并从中获取Zookeeper服务端分配的SessionId
+7. 连接成功后，一方面通知SendThread线程，对客户端进行会话参数设置，包括readTimeOut和ConnectTimeOut，并更新客户端状态，另一方面通知地址管理器当前服务器地址已成功连接
+8. SendThread会生成一个事件SyncConnected-None，代表客户端与服务器会还创建成功，将该事件传递给EventThread线程
+9. EventThread线程收到事件后，找到对应的watcher，将其放到EventThread的waiting队列中
+10. EventThread不断从waitingEvent队列中取出待处理的watcher对象，然后调用该对象的process接口方法
+
+至此，完成会话创建的全部过程
+
+## 会话超时创建
+
+Session是由ZK服务端管理，服务端可能连接多个客户端服务，服务端为方便管理过期时间，则将会话维护在桶中。桶区分的维度则是通过ExpirationTime。
+
+如果不区分的话，ZK服务端在运行期间对会话超时检测时，则需要遍历所有的会话，性能差。若是以桶的概念，只扫描对应的桶即可
+
+ExpirationInterval 是ZK服务端定时检查过期Session的频率，默认是2000ms。得到的ExpirationTime是ExpirationInterval 的倍数，取得是会话设置的过期时间的近似值。
+
+```java
+ExpirationTime = CurrentTime + SessionTimeout;
+ExpirationTime = (ExpirationTime / ExpirationInterval + 1) * ExpirationInterval;
+```
+
+ZK在超时会话检测时，只需要扫描一个桶就可以了。而且过期时间是扫描频率的倍数，避免了刚扫描完后，立马就有一个会话过期了，只能等到下一次才能超时扫描关闭会话。
+
+![在这里插入图片描述](zookeeper.assets/7d88dab60a5ca6af1fe7b06c198716a7.png)
+
+SessionA 超时时间是3000ms后过期，SessionB是1500ms后过期，则SessionA 计算结果是5000ms，则放在4000ms的桶里。SessionB计算结果是3000ms，则放在2000ms的桶里。
+
+| 0    | 2000ms   | 4000ms   | 6000ms | 8000ms |
+| :--- | :------- | :------- | :----- | :----- |
+|      | sessionB | sessionA |        |        |
+
+ZK避免了遍历所有的会话，如果检测到当前会话已超时，则将isCloseing属性标记为已关闭。再有会话请求，则也不会被处理
+
+
+
+## 会话激活
+
+在客户端与服务端完成连接后，设置过期时间，该时间不是一直不变的，随着客户端与服务端的交互会不断更新。过期时间的更新，则所在桶的位置会迁移。**会话激活即过期时间的刷新。**
+
+变更桶的方式有
+
+- 客户端每次向服务端发送请求，包括读请求和写请求，都会触发一个激活，刷新过期时间
+- 客户端与服务端一直没有请求时，则会在TimeOut的三分之一时间内发送ping心跳，来保持Session的激活状态。
+
+Zk会有一个单独的线程按**ExpriationInterval** 倍数的时间点进行超时检查
+
+
+
+## 会话清理
+
+会话检查操作以后，发现超时的清理步骤
+
+1. 会话请求需要时间，为避免清理过程中该会话还会接受和处理请求，则在发现超时后，会先将会话的isClose标记为true。则该会话无法再处理请求
+2. 发起会话请求给PrepRequestProcessor，使其在整个Zk集群生效
+3. 通过分桶策略，找到需要清理的会话，找到对应的临时节点
+4. Zk将需要删除所有节点的List变为删除节点的请求，给事件变更队列OutStandingChanges中，接着FinalRequestProcessor处理器会出发删除节点的操作，从内存中删除
+5. 会话对应的临时节点删除后，将会话从SessionTracker中移除，主要从SessionById，sessionWithTimeOut以及sessionSets中将会话移除，最后关闭最终的连接NioServerCnxn
+
+ 
+
+# 8 分布式锁
+
+Zookeeper的设计之初就是为了实现方便的分布式锁。
+
+## 获取锁
+
+Zookeeper创建一个持久节点ParentLock。
+
+当用户1需要获取锁时，需要在PartLock节点下创建一个临时顺序节点Lock1。用户1 查询ParentLock下面所有的临时顺序节点，判断自己创建的Lock1是不是顺序最靠前的一个，如果是，则成功获取到锁。
+
+![img](zookeeper.assets/20210309175518.png)
+
+
+
+用户2也需要获取锁时，也需要在PartLock节点下创建一个临时顺序节点Lock2，用户2查询ParentLock下面顺序节点，最靠前的是Lock1，并不是Lock2，则获取锁失败。因此，用户2向Lock1 注册watcher，用户监听Lock1 是否存在，用户2抢锁失败，进入等待。
+
+![img](zookeeper.assets/20210309175609.png)
+
+
+
+用户3 尝试获取到锁时，也需要在PartLock节点创建一个临时顺序节点Lock3，发现Lock3不是最小的锁，则创建监听Lock2的watcher，抢锁失败，进入等待状态。
+
+![img](zookeeper.assets/20210309175635.png)
+
+用户1获取到锁，用户2 监听Lock1，用户3监听Lock2，形成等待队列，类似AQS。
+
+
+
+## 释放锁
+
+释放锁有两种情况
+
+-  用户1的任务完成，调用删除节点Lock1指令
+- 用户1在任务执行中崩溃，未能解释释放锁
+  - 会断开Zookeeper服务端的连接，关联节点Lock1因此也会删除。
+
+用户2 一直在监听Lock1，Lock1节点删除，则会通知用户2，用户2会再次查询ParentLock下面的所有节点，确认自己创建的节点Lock2是不是最小的临时节点，若是，则获取锁，执行用户2 的任务。
+
+![img](zookeeper.assets/20210309175847.png)
+
+同理，用户2执行完任务，删除Lock2后，通知用户3，用户3 再获取Lock3
+
+
+
+## Zookeeper 分布式锁与Redis分布式锁的比较
+
+| 分布式锁  | 优点                                                         | 缺点                                                         |
+| --------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| Zookeeper | 1. 有封装好的框架，容易实现<br />2. 有等待锁的队列，大大提升了抢锁的效率<br />3. ZK支持可重入，Redis的锁重入需要在客户端实现 | 添加和删除节点性能比较低                                     |
+| Redis     | set和del指令的性能较高                                       | 1. 实现复杂，需要考虑超时、原子性、超时等情况<br />2.没有等待锁的队列。需要客户端自旋等待锁，效率低 |
+
+
+
+# Zookeeper 应用场景
+
+
+
+## 数据发布/订阅
+
+某些数据由机器共享，而且这些信息经常发生变化，而且数据量下，则这些数据适合存储在Zookeeper中
+
+- 数据存储：将数据存储到Zookeeper上一个数据节点上
+- 数据获取：应用在启动初始化节点从Zookeeper数据节点读取数据，并在该节点上注册一个数据变更的watcher
+- 数据变更：数据变更会更新Zookeeper对应节点数据，Zookeeper会将数据变更通知发给各客户端，客户端收到通知后会重新读取变更后的数据
+
+
+
+## 统一配置管理
+
+统一配置管理和数据发布/订阅一张，配置文件可配置在Zookeeper上。统一配置管理更倾向于，公共的配置，若集群分属不同机房，更倾向于同机房调用时，则不必抽离到公共配置中。
+
+1. 将配置文件写入到Zookeeper的一个ZNode
+2. 各个客户端服务监听这一个ZNode
+3. 一旦ZNode发生改变，Zookeeper 将通知各个客户端服务
+
+![img](zookeeper.assets/20210309172415.png)
+
+## 统一集群管理
+
+监控整个集群有多少机器在工作，对运行状态进行采集，对RPC接口进行上下线操作。若是通过监控系统，则需要监控系统定时检测每个机器，或者每个机器不断向监控系统发送ping请求。
+
+1. 集群中机器有变动时，牵连修改内容多
+2. 有一定延时
+
+
+
+Zookeeper可支持，监控
+
+1. 客户端在ZK节点上注册一个watcher，如果该节点的子节点变化，会通知该客户端
+2. 创建ephemeral类型的节点，客户端与服务器的会话结束或者过期，则该节点消失
+
+
+
+监控系统在manage节点上注册一个Watcher，如果manage子节点列表发生变动，则该监控系统就能实时得知集群中机器的增减情况
+
+![img](zookeeper.assets/20210309232621.png)
+
+## 负载均衡
+
+提供方有多台机器提供服务，可以通过nginx 在服务端进行负载均衡的配置，也可以通过Zookeeper在客户端进行负载均衡的配置。选择哪台机器进行访问，落在调用方计算。并且负载均衡的策略也可以实时变更，最后同步到调用方
+
+- 多个提供相同服务的机器注册
+- 调用方获取中间件地址集合
+- 从集合中随机选一个服务执行任务。
+
+![img](zookeeper.assets/20210309180848.png)
+
+
+
+## 命名服务（注册中心）
+
+**命名服务实际上就是注册中心。**常见的有RPC的注册中心、kafka注册中心
+
+通过别名获取到指定的资源或者提供服务的地址。
+
+Dubbo通过Zookeeper作为注册中心，维护全局的服务地址列表
+
+- 提供方在启动时，向Zookeeper上的固定节点/dubbo/${serverName}/providers 目录下写入自己的URL地址，写入后意味着服务的发布
+- 调用方启动时，订阅/dubbo/${serverName}/consumers目录下写入自己的URL地址
+- Dubbo有针对服务粒度的监控，订阅/dubbo/${serverName}目录下所有提供者和消费者的信息，发生变更后都会同步所有消费者和提供方
+
+
+
+**所有向Zookeeper上注册地址都是临时节点**，保证提供方和调用方都可以自动感应资源的变化
+
+
+
+**分布式锁和选举也是Zookeeper的应用场景**
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
