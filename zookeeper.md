@@ -97,7 +97,7 @@ ZAB的协议，则是对该三种角色的协议，分为 **消息传播**和**�
 
 zookeeper采用全局递增的事物Id来标识。所有的变更发生时都会有一个Zookeeper Transaction Id。ZXID 是64位的Long类型。**各个角色根据该Id保证事务顺序一致性。**ZXID 高32位表示纪元epoch，低32位表示xid。
 
-![在这里插入图片描述](zookeeper.assets/cfb646b6c1cf54c061c7435942411d80.png)
+![](zookeeper.assets/cfb646b6c1cf54c061c7435942411d80.png)
 
 - 每个leader 都会有不同的epoch值。表示一个朝代。从1开始，每次新的选举，选出新的leader后，epoch递增1。并且将该值更新到所有zkService的epoch。
 - xid是一个递增的事务编号。数值越大说明数据越新。每次epoch变化，都将低32位的xid重置。
@@ -146,7 +146,7 @@ ZkService收到写请求后，转发到Leader。Leader根据写请求，询问�
 
 Leader节点接收到写请求后，Leader将会把写请求广播给各个server。各个Server将该写请求加入到历史队列，并向Leader发送Ack信息。收到超过半数的Ack信息后，说明该操作可以执行。Leader会向各个Server提交commit消息，各个Server收到消息后执行操作
 
-- Leader不需要得到Observer的Ack（Observer无投票权）
+- **Leader不需要得到Observer的Ack**（Observer无投票权）
 - Leader不需要得到所有Follower的Ack，只需要得到一半即可（Leader本身对自己就有一个Ack）
 - Observer虽然无投票权，但仍同步Leader数据，从而在处理读请求时，可以返回新数据
 
@@ -164,7 +164,7 @@ Leader节点接收到写请求后，Leader将会把写请求广播给各个serve
  崩溃恢复模式分为四步：选举、发现、同步、广播
 
 1. 选举阶段：当Leader崩溃后，集群进度选举阶段，选出准leader
-2. 发现阶段：从各个节点中发现最新的ZXID和事务日志。准Leader接收所有Follower的各自的epoch值。Leader从中选取最大的epoch + 1，将新值发给各个Follower。Follower回应Ack给Leader，带上各自最大的ZXID和存储的信息。Leader选取最大的ZXID，并更新自身历史日志。Leader有了最新的提议历史（每次epoch变化时，ZXID重新从0开始）
+2. 发现阶段：从各个节点中发现最新的ZXID和事务日志。准Leader接收所有Follower的各自的epoch值。Leader从中选取最大的epoch + 1，将新值发给各个Follower。Follower回应Ack给Leader，带上各自最大的ZXID和存储的信息。Leader选取最大的ZXID，并更新自身历史日志。Leader有了最新的提议历史（每次epoch变化时，ZXID重新从0开始）【准Leader接受所有Follower最新的数据，同步自己，保证自身是最新的数据】
 3. 同步阶段：Leader获取到最新的提议历史，则同步所有Follower。超过半数Follower同步成功，准Leader才成为正式Leader。（再同步提议时，follower只同步zxid比自己lastZxid大的提议）
 4. 广播阶段：集群恢复到广播模式，开始接受客户端的写请求。
 
@@ -180,6 +180,7 @@ Leader节点接收到写请求后，Leader将会把写请求广播给各个serve
     ![在这里插入图片描述](zookeeper.assets/941001e25663ddf3a304190acf12f5c1.png)
 
   - **确保跳过那些已经被丢弃的提案**
+    
     - Leader（server2）统一了提案N1,自身提交了提议，没提交到server1和server3时挂了。无论是server1还是server3选举成Leader。server2恢复后作为Follower加入集群，同步Leader的提案历史，sever2的提案N1会被丢弃。
       ![在这里插入图片描述](zookeeper.assets/1322c36948cb00bfa4a3d22673f687d2.png)
 
@@ -187,7 +188,7 @@ Leader节点接收到写请求后，Leader将会把写请求广播给各个serve
 
 当前集群需要选举leader，当所有节点通信没有问题时，会选举出一个master。若通信出现了问题，至少两个节点被选为leader，所以一个集群有两个及以上个leader。
 
-ZAB为解决脑裂问题，要求集群内的结点数量为2N+1，当网络分裂后，始终有一个集群的结点数量超过半数，而另一个集群节点数量小于N+1（小于半数），**选举需要过半数节点同意。**所以不会有两个leader。
+ZAB协议为解决脑裂问题，要求集群内的结点数量为2N+1（奇数），当网络分裂后，始终有一个集群的结点数量超过半数，而另一个集群节点数量小于N+1（小于半数），**选举需要过半数节点同意。**所以不会有两个leader。
 
 因此，过半机制，对于Zookeeper集群，要么没有leader，要么只有一个1个leader，由此避免了脑裂问题。
 
@@ -212,6 +213,8 @@ leader选举可以分为两个种
 ## 4.1 初始化选举
 
 假设三台机器myid为 1、2、3
+
+ZXID = 高32位epoch + 低32位epoch
 
 1. 机器1 启动，发起选举，会投给自己，投票内容为**（myid，ZXID）**，初始化时，ZXID为0，此时Server1 只能收到1票，不够半数以上，则无法选举为leader。该状态为looking
 
@@ -276,9 +279,9 @@ Znode的数据信息
 
 watcher监听机制，监听Zookeeper上节点的变化，绑定监听事件，监听节点数据的变更、节点删除、状态变更等。通过该机制，可以实现基于Zookeeper分布式锁、集群管理。
 
-watcher监听机制：**客户端想服务端注册指定的watcher，当服务端符合了watcher指定的某些事件，则想客户端发送事件通知，客户端收到通知后找到自己定义的watcher然后执行相应的回调方法。**
+watcher监听机制：**客户端想服务端注册指定的watcher，当服务端符合了watcher指定的某些事件，则向客户端发送事件通知，客户端收到通知后找到自己定义的watcher然后执行相应的回调方法。**
 
-客户端在Zookeeper上某个节点监听了事件，事件被触发后，Zookeeper会通过回调函数的方式通知客户端，但后续即使再次满足事件要求都不会发消息通知（watcher是一次性操作），可以通过循环监听达到永久监听的效果。
+客户端在Zookeeper上某个节点监听了事件，事件被触发后，Zookeeper会通过回调函数的方式通知客户端，**但后续即使再次满足事件要求都不会发消息通知（watcher是一次性操作），可以通过循环监听达到永久监听的效果。**
 
 
 
@@ -325,9 +328,11 @@ session 会话状态包括
 
 ## 会话ID的生成
 
+**会话的组成**
+
 - sessionID：会话的ID会唯一标识，全局唯一
 - TimeOut：指定连接服务器的最长连接时间。
-- ExpirationTime：过期时间。TimeOut是相对时间，ExpirationTime是一个绝对时间。但计算方式不是 `ExpirationTime = CurrentTime + Timeout`，后续会讲解。
+- ExpirationTime：过期时间。TimeOut是相对时间，**ExpirationTime是一个绝对时间**。但计算方式不是 `ExpirationTime = CurrentTime + Timeout`，后续会讲解。
 - TickTime：下一次会话超时时间点，为了便于Zookeeper对会话实行分桶策略管理，同时为了高效低耗地实现会话的超时检查与清理。Zookeeper会为每个会话标记一个下次会话的超时时间点，TickTime是一个13位的Long类型数值，一般情况下该值接近TimeOut，但不完全相等
 - isCloseing：用来标记当前会话是否处于被关闭的状态。如果服务端检测到当前会话的超时时间，则将isCloseing属性标记为已关闭，再有该会话的请求都不会处理
 
