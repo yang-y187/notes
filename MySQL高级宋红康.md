@@ -909,7 +909,7 @@ redo 日志的组成：有内存和文件两部分组成，redo log buffer和red
 
 - 主线程每秒将redo log buffer刷盘到 redo log file
 - 每次事务提交将进行刷盘
-- redo log buffer神域空间小于1/2时，进行刷盘
+- redo log buffer剩余空间小于1/2时，进行刷盘
 
 
 
@@ -925,13 +925,11 @@ redo log buffer刷盘到 redo log file的过程并不是真正刷到磁盘，而
 
 
 
-
-
-
-
 **redo log file写入策略：**
 
 日志文件的大小是有限，因此可以采用循环使用的方式，当数据已满时，就会将一部分已经更新的文件清空。
+
+
 
 ## 2，undo 日志
 
@@ -1034,11 +1032,14 @@ CheckPoint技术：将缓存池中的脏页刷会到磁盘。有两种CheckPoint
 2、必须要有事务，这样才是 行锁（排他锁）
 
 3、在select  语句后面 加 上    FOR UPDATE；
+
 ```
 
 InnoDB可以使用行级锁，表锁，MyISAM只能使用表锁。
 
-**InnoDB行锁是通过给索引上的索引项加锁来实现的，这一点MySQL与[Oracle](http://www.2cto.com/database/Oracle/)不同，后者是通过在数据块中对相应数据行加锁来实现的。InnoDB这种行锁实现特点意味着：只有通过索引条件检索数据，InnoDB才使用行级锁，否则，InnoDB将使用表锁！**
+写操作默认加行锁（如果查询条件中没有使用索引，InnoDB可能需要进行全表扫描来找到目标行。在这种情况下，InnoDB可能会锁定更多的行，甚至可能导致锁升级为表锁，影响整个表的并发访问。）
+
+==**InnoDB行锁是通过给索引上的索引项加锁来实现的，这一点MySQL与[Oracle](http://www.2cto.com/database/Oracle/)不同，后者是通过在数据块中对相应数据行加锁来实现的。InnoDB这种行锁实现特点意味着：只有通过索引条件检索数据，InnoDB才使用行级锁，否则，InnoDB将使用表锁！**==
 
 - 表锁
   - 表级别的x，s锁：InnoDB一般使用行锁不使用表锁，	
