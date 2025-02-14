@@ -1121,7 +1121,7 @@ ReadView与每一个Undo Log的版本进行匹配。（遍历的事务Undo log�
 查询一条记录如何通过MVCC获取
 
 1. 首先获取事务自己的ID
-2. 获取ReadView
+2. 创建ReadView
 3. 若查询到数据然后与ReadView中的事务ID比较
 4. 不符合规则，则从Undo log中获取历史版本【即该行数据的版本链】，挨个遍历
 5. 最后返回符合规则的数据
