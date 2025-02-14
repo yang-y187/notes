@@ -1162,16 +1162,21 @@ binary log：它记录了数据库所有执行的DDL和DML等数据库内容进�
   - bin log 保证了主从复制的数据一致性
 - redo log 是执行事务时就写入数据，bin log日志是事务一提交才写入日志
 
+**解释了binlog变更发mq，为什么选择binlog日志，而不是选择redo log日志。**
+
+1. 因为redo log 日志是innoDB所特有的日志文件，bin log 日志是所有存储引擎都有的日志文件。
+2. 另外，发数据变更消息的mq时，基本都是从库发出的，bin log正好也适用于主从复制
+
 ## 4，两阶段提交
 
-redo log 是执行事务后就写入数据，bin log日志是事务一提交才写入日志。若事务提交后，出现异常，导致redo log日志写入完成，bin log日志未写入。导致从机数据未更新。
+redo log 是执行事务后就写入数据，bin log日志是事务一提交才写入日志。若事务提交后，出现异常，导致redo log日志写入完成，bin log日志未写入。导致从机数据未更新。【说白了，两个日志存在兼容问题】
 
 所以选择两阶段提交：
 
 redo log日志写入分为两个阶段，
 
 - 若在写入 bin log日志出现异常，则redo log没有第二阶段，所以会进行回滚。
-- 若relo log设置commit阶段发生异常，不会回滚。因为发现bin log日志已经写入，不必回滚
+- 若redo log设置commit阶段发生异常，不会回滚。因为发现bin log日志已经写入，不必回滚
 
 ![image-20220317164607408](MySQL%E9%AB%98%E7%BA%A7%E5%AE%8B%E7%BA%A2%E5%BA%B7.assets/image-20220317164607408.png)
 
