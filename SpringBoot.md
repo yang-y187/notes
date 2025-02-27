@@ -5116,7 +5116,7 @@ Spring原理【[Spring注解](https://www.bilibili.com/video/BV1gW411W7wy?p=1)�
     - List<ApplicationContextInitializer<?>> **initializers**
   - 找==ApplicationListener==，应用监听器 ，去**spring.factories找ApplicationListener**
 
-  - - - List<ApplicationListener<?>> **listeners**
+  - - List<ApplicationListener<?>> **listeners**
 
 - 运行SpringBoot
 
@@ -5191,6 +5191,65 @@ Spring原理【[Spring注解](https://www.bilibili.com/video/BV1gW411W7wy?p=1)�
 - 调用所有监听器的 running 方法  **listeners.running(context); 通知所有的监听器 running,即IOC容器正常运行** 
   
 - running如果有问题。继续通知 failed 。调用所有 Listener 的 failed；通知所有的监听器 failed
+
+
+
+
+
+### 简略版
+
+1. **启动主类**：
+   - 应用从一个带有 `@SpringBootApplication` 注解的主类启动。这个注解整合了 `@Configuration`、`@EnableAutoConfiguration` 和 `@ComponentScan`，简化了配置。
+
+2. **创建 `SpringApplication` 实例**：
+   - `SpringApplication.run(MainClass.class, args)` 是启动的核心入口。
+   - `SpringApplication` 实例化时会设置应用类型（Web 或非 Web），并初始化默认的配置和监听器。
+
+3. **准备环境**：
+   - `prepareEnvironment()` 方法创建 `ConfigurableEnvironment`，加载系统属性、环境变量和配置文件（如 `application.properties`）。
+   - 发布 `ApplicationEnvironmentPreparedEvent`，允许监听器对环境进行调整。
+
+4. **打印启动横幅**：
+   - 控制台输出一个启动横幅，可以通过配置关闭。
+
+5. **创建和配置应用上下文**：
+   - `createApplicationContext()` 根据应用类型创建合适的 `ApplicationContext` 实例。
+   - `configure()` 方法应用初始化器和监听器。
+
+6. **应用初始化器**：
+   - 通过 `ApplicationContextInitializer` 对应用上下文进行进一步初始化。这些初始化器可以在启动时通过配置或代码添加。
+
+7. **刷新应用上下文**（重点）：
+   - `refreshContext()` 调用 `refresh()`，这是启动过程的核心步骤：
+     - 加载所有的 bean 定义。
+     - 实例化所有非懒加载的单例 bean。
+     - 触发各种生命周期回调，如 `@PostConstruct` 和 `InitializingBean`。
+
+8. **自动配置**（重点）：
+   - 自动配置通过 `@EnableAutoConfiguration` 实现，扫描 `META-INF/spring.factories` 中的配置类。
+   - 使用条件注解（如 `@ConditionalOnMissingBean`）来决定是否应用特定配置，自动配置常用于数据库连接池、视图解析器等。
+
+9. **启动嵌入式 Web 服务器**：
+   - 如果是 Web 应用，Spring Boot 会启动一个嵌入式服务器（如 Tomcat）。
+   - 服务器启动后，应用部署在服务器上，准备处理请求。
+
+10. **执行命令行运行器**：
+    - 调用实现了 `CommandLineRunner` 和 `ApplicationRunner` 的 bean，用于执行启动后的逻辑。
+      - 调用该所有的 **CommandLineRunner** 的实现类并调用其中的 **run** 方法 
+    
+11. **发布应用准备就绪事件**：
+    - 发布 `ApplicationReadyEvent`，表明应用已启动并可以处理请求。
+
+12. **异常处理**：
+    - 启动过程中出现的异常会被捕获，通常会打印错误信息并终止应用。
+
+通过以上步骤，Spring Boot 实现了从启动到运行的完整生命周期管理，自动配置和嵌入式服务器启动是其中的关键环节，极大地简化了开发和部署的复杂性。
+
+
+
+
+
+
 
 # 复习
 
