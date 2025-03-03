@@ -196,6 +196,8 @@
 
 - RecordAccumulator：增加缓冲区(缓存队列)大小，修改为64m
 
+可以增加分区，提高Topic的性能
+
 
 
 ## 4，数据可靠性
@@ -497,6 +499,11 @@ Kafka有四种主流的分区分配策略： Range、RoundRobin、Sticky、Coope
   - 将所有topic的所有partition和所有的consumer，列出来，按hashcode排序，通过轮询算法分配partition给consumer
 - Sticky 粘性分区
   - 分区时，按 partitions数/consumer数 来决定每个消费者应该消费几个分区。分区时随机排序的，而不是按一定规则排序。
+- CooperativeSticky
+  - 其他分区策略都需要consumers先放弃当前持有的分区，重新加入consumer group；
+  - 而CooperativeStickyAssignor基于cooperative协议，该协议将原来的一次全局分区重平衡，改成多次小规模分区重平衡。渐进式的重平衡。
+  - 协议允许消费者在参与再平衡事件之前保留其当前拥有的分区。分配者不应该立即重新分配任何拥有的分区，而是可以指示消费者需要撤销分区，以便可以在下一次重新平衡事件中将被撤销的分区重新分配给其他消费者。
+  
 
 
 

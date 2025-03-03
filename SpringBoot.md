@@ -5223,11 +5223,12 @@ Spring原理【[Spring注解](https://www.bilibili.com/video/BV1gW411W7wy?p=1)�
    - `refreshContext()` 调用 `refresh()`，这是启动过程的核心步骤：
      - 加载所有的 bean 定义。
      - 实例化所有非懒加载的单例 bean。
-     - 触发各种生命周期回调，如 `@PostConstruct` 和 `InitializingBean`。
+     - 触发各种生命周期回调，如 `@PostConstruct` 和 `InitializingBean`（在当前Bean初始化时执行，而非IOC容器初始化完成后执行）。
 
-8. **自动配置**（重点）：
+8. **自动装配**（重点）：
    - 自动配置通过 `@EnableAutoConfiguration` 实现，扫描 `META-INF/spring.factories` 中的配置类。
    - 使用条件注解（如 `@ConditionalOnMissingBean`）来决定是否应用特定配置，自动配置常用于数据库连接池、视图解析器等。
+   - 自动装配结束后才是IOC容器真正启动完， 实现了`ApplicationListener<ContextRefreshedEvent> 接口的监听器在应用上下文完全准备就绪后执行逻辑。
 
 9. **启动嵌入式 Web 服务器**：
    - 如果是 Web 应用，Spring Boot 会启动一个嵌入式服务器（如 Tomcat）。
@@ -5235,8 +5236,8 @@ Spring原理【[Spring注解](https://www.bilibili.com/video/BV1gW411W7wy?p=1)�
 
 10. **执行命令行运行器**：
     - 调用实现了 `CommandLineRunner` 和 `ApplicationRunner` 的 bean，用于执行启动后的逻辑。
-      - 调用该所有的 **CommandLineRunner** 的实现类并调用其中的 **run** 方法 
-    
+      - 调用该所有的 **CommandLineRunner** 的实现类并调用其中的 **run** 方法 ，可以通过@order 指定顺序
+
 11. **发布应用准备就绪事件**：
     - 发布 `ApplicationReadyEvent`，表明应用已启动并可以处理请求。
 
