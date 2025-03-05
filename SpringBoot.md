@@ -5228,7 +5228,7 @@ Spring原理【[Spring注解](https://www.bilibili.com/video/BV1gW411W7wy?p=1)�
 8. **自动装配**（重点）：
    - 自动配置通过 `@EnableAutoConfiguration` 实现，扫描 `META-INF/spring.factories` 中的配置类。
    - 使用条件注解（如 `@ConditionalOnMissingBean`）来决定是否应用特定配置，自动配置常用于数据库连接池、视图解析器等。
-   - 自动装配结束后才是IOC容器真正启动完， 实现了`ApplicationListener<ContextRefreshedEvent> 接口的监听器在应用上下文完全准备就绪后执行逻辑。
+   - 自动装配结束后才是IOC容器真正启动完， 实现了`ApplicationListener<ContextRefreshedEvent>` 接口的监听器在应用上下文完全准备就绪后执行逻辑。
 
 9. **启动嵌入式 Web 服务器**：
    - 如果是 Web 应用，Spring Boot 会启动一个嵌入式服务器（如 Tomcat）。

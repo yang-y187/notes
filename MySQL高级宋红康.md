@@ -1186,7 +1186,7 @@ redo log日志写入分为两个阶段，
 - 若在写入 bin log日志出现异常，则redo log没有第二阶段，所以会进行回滚。
 - 若redo log设置commit阶段发生异常，不会回滚。因为发现bin log日志已经写入，不必回滚
 
-![image-20220317164607408](MySQL%E9%AB%98%E7%BA%A7%E5%AE%8B%E7%BA%A2%E5%BA%B7.assets/image-20220317164607408.png)
+<img src="MySQL%E9%AB%98%E7%BA%A7%E5%AE%8B%E7%BA%A2%E5%BA%B7.assets/image-20220317164607408.png" alt="image-20220317164607408" style="zoom:200%;" />
 
 **binary log日志格式**
 
