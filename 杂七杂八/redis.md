@@ -1,981 +1,941 @@
-# 并发篇
-
-## Java多线程——交替打印ABC
-
-https://blog.csdn.net/weixin_41070695/article/details/112596316
-
-
-
-交替打印 1-10；
-
-```java
-public class Main{
-
-    static volatile Integer count = 1;
-    public static void main(String[] args){
-
-        new Thread(()->{
-            for (int i = 0; i < 5; ) {
-                while (count%2!=1){
-
-                }
-                synchronized (count){
-                    i++;
-                    System.out.println(count);
-                    count++;
-                }
-            }
-        }).start();;
-        new Thread(()->{
-            for (int i = 0; i < 5; ) {
-                while (count%2!=0){
-
-                }
-                synchronized (count){
-                    i++;
-                    System.out.println(count);
-                    count++;
-                }
-            }
-        }).start();;
-    }
-}
-```
-
+# Redis
 
-
-## 生产者消费者问题
+## Redis单线程为什么这么快？
 
+Redis是单线程还是多线程？
 
-
-生产者消费者问题（Producer-consumer problem），是一个多线程同步问题的经典案例。生产者生成一定量的数据放到缓冲区中，然后重复此过程；与此同时，消费者也在缓冲区消耗这些数据。生产者和消费者之间必须保持同步，要保证生产者不会在缓冲区满时放入数据，消费者也不会在缓冲区空时消耗数据。不够完善的解决方法容易出现死锁的情况，此时进程都在等待唤醒。
-
-
-
-```java
-class Storge {
-    private final int MAX_SIZE = 10;
-    private LinkedList<Object> list = new LinkedList<>();
+- 若是核心业务，命令处理部分，是单线程
+- 要是整个redis，则是多线程 （网络 I/O，处理大量的请求时）
 
-    public void produce() {
-        synchronized (list) {
-            // 首先判断仓库是否已满，已满则调用wait，不生产
-            while (list.size() == MAX_SIZE) {
-                System.out.println("【生产者" + Thread.currentThread().getName()
-                        + "】仓库已满");
-                try {
-                    list.wait();
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
-            list.add(new Object());
-            System.out.println("【生产者" + Thread.currentThread().getName()
-                    + "】生产一个产品，现库存" + list.size());
-            list.notifyAll();
-        }
-    }
-
-    public void consume() {
-        synchronized (list) {
-            while (list.size() == 0) {
-                System.out.println("【消费者" + Thread.currentThread().getName()
-                        + "】仓库为空");
-                try {
-                    list.wait();
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
-            list.remove();
-            System.out.println("【消费者" + Thread.currentThread().getName()
-                    + "】消费一个产品，现库存" + list.size());
-            list.notifyAll();
-        }
-    }
-}
-
-
-public class Main {
-
-    public static void main(String[] args) {
-        Storge storge = new Storge();
-        
-        new Thread(()->{
-            for (int i = 0; ; i++) {
-                storge.produce();
-            }
-        }).start();
-        
-        new Thread(()->{
-            for (int i = 0; ; i++) {
-                storge.produce();
-            }
-        }).start();
+**原因**
 
-        new Thread(()->{
-            for (int i = 0; ; i++) {
-                storge.produce();
-            }
-        }).start();
+- 基于内存操作，CPU不是Redis的性能瓶颈，Redis的瓶颈是根据机器的内存大小和网络带宽
+- 核心是基于IO多路复用机制
+- 单线程反而避免了多线程频繁上下文切换带来的性能问题
+- 多线程会面临线程安全问题，使得复杂度增高
 
-        new Thread(()->{
-            while (true){
-                storge.consume();
-            }
-        }).start();
-        
 
-    }
-}
-```
 
 
 
-##  读者-写者问题
+Redis基于Recator模式开发了网络事件处理器，文件事件处理器。。因为事件处理器是单线程的，所以redis才叫做**单线程的模型**。
 
-（1）允许多个读者同时执行读操作；
-
-（2）不允许读者、写者同时操作；
-
-（3）不允许多个写者同时操作。一次只能一个写者  
-
-
-
-```java
-public class Main {
-
-    public static void main(String[] args) {
-        Disk disk = new Disk();
-        new Thread(() -> {
-            for (int i = 0; i < 50; i++) {
-                try {
+文件事件处理器包括：
 
-                    disk.start_read();
-                    Thread.sleep((long) Math.random() * 1000);
-
+- 多个Socket
+- IO多路复用程序
+- 文件事件分派器
+- 事件处理器
 
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                disk.finish_read();
-            }
-        }).start();
-        new Thread(() -> {
-            for (int i = 0; i < 50; i++) {
-                try {
+**单线程处理流程：**Socket（套接字，接收请求）
 
-                    disk.start_read();
-                    Thread.sleep((long) Math.random() * 1000);
+多个Socket可能并发的产生不同的事件，IO多路复用会监听多个Socket，有事件发生，字符将Socket加入到队列中排队。每次队列有序，同步从队列中取出Socket给事件分派器，事件分派器把Socket交给对应的事件处理器。然后事件处理器执行完，IO多路复用会将队列职中下一个Socket给事件分派器。
 
 
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                disk.finish_read();
-            }
-        }).start();
-        new Thread(() -> {
-            for (int i = 0; i < 50; i++) {
-                try {
 
-                    disk.start_read();
-                    Thread.sleep((long) Math.random() * 1000);
 
 
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                disk.finish_read();
-            }
-        }).start();
+## Redis各种命令时间复杂度一览表
 
+https://blog.csdn.net/qq_23564667/article/details/110917900
 
-        new Thread(() -> {
-            for (int i = 0; i < 50; i++) {
-                try {
 
-                    disk.start_write();
-                    Thread.sleep((long) Math.random() * 1000);
 
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                disk.finish_write();
-            }
-        }).start();
+## 为什么要用Redis而不直接用Map做缓存?
 
+1、Redis 可以用几十 G 内存来做缓存，Map 不行，一般 JVM也就分几个 G 数据就够大了
 
-    }
-}
+2、Redis 的缓存可以持久化，Map 是内存对象，程序一重启数据就没了
 
+3、Redis 可以实现分布式的缓存，【多个微服务机器可共享】，Map 只能存在创建它的程序里
 
-class Disk {
-    // 写者信号量
-    private Semaphore write_mutex = new Semaphore(1);
-    // 读者信号量
-    private  Semaphore read_mutex = new Semaphore(1000);
+4、Redis 单点吞吐量能达到10万级，是专业的缓存服务，Map 只是一个普通的对象
 
-    // 读者数量
-    private volatile Integer read_count = 0;
+5、Redis 缓存有过期机制，Map 本身无此功能
 
-    public void start_read() throws InterruptedException {
-        while (write_mutex.availablePermits() == 0) {
-        }
-        // 获取读者信号量
-        read_mutex.acquire();
-        System.out.println(Thread.currentThread().getName() + "    start_read");
-        synchronized (read_count) {
-            read_count++;
-        }
+6、Redis 有丰富的 API，Map 就简单太多了
 
-    }
 
-    public void finish_read() {
-        // 修改读者数量
-        synchronized (read_count) {
-            read_count--;
-        }
-        System.out.println(Thread.currentThread().getName() + "    finish_read");
-        // 释放读者信号量
-        read_mutex.release();
 
-    }
 
-    public void start_write() throws InterruptedException {
-        while (read_count != 0) {}
 
-        write_mutex.acquire();
-        System.out.println(Thread.currentThread().getName() + "    start_write");
-    }
 
-    public void finish_write() {
-        write_mutex.release();
-        System.out.println(Thread.currentThread().getName() + "    finish_write");
-    }
 
-}
+## Redis事务
 
-```
+- **Redis 事务提供了一种将多个命令请求打包的功能。然后，再按顺序执行打包的所有命令，并且不会被中途打断。**
+- r**edis不支持回滚，所以不支持原子性**（又是基于内存操作，不支持持久性或者说持久化性能不足）
+- 通过4个指令完成事务
+  - `MULTI` 开始事务。Redis 不会立即执行这些命令，而是将它们放到队列，当调用了 `EXEC`命令将执行所有命令。
+  - `EXEC` 执行事务
+  - `DISCARD` 取消该事务 
+  - `WATCH` 监听指定的键，当调用 `EXEC` 命令执行事务时，如果一个被 `WATCH` 命令监视的键被修改的话，整个事务都不会执行，直接返回失败。先watch后multi，否则无效。
 
+若事务中某一行执行错误，不影响其他行的执行
 
+## 数据库如何与Redis数据保持一致性
 
+数据库刷新Redis数据时，发MQ。可能存在频繁更新，MQ刷库乱序的问题
 
+更新数据时：
 
+前提：该表有版本号，每次更新变更版本号。
 
+1. watch key 监控需要变更的key
+2. **查询Redis中的数据是否超过了 本次更新的版本号 若否则继续执行下去**
+3. mutli  开启事务
+4. set & exec
 
 
 
-## 1.线程状态
+## 1，项目注意点
 
-**要求**
+- 请求用户信息时，不能返回用户所有的信息，只封装用户需要的信息。（不能说请求用户名，把用户所有信息，用户名，id，密码都返回这是不应该的）
+  - 解决方法：DTO类与TO类相仿，只保存请求相关的信息
 
-* 掌握 Java 线程六种状态
-* 掌握 Java 线程状态转换
-* 能理解五种状态与六种状态两种说法的区别
 
-**六种状态及转换**
 
-![image-20220313175549225](redis.assets/image-20220313175549225-16473155695371.png)
+![image-20220510174628403](redis.assets/image-20220510174628403.png)
 
-分别是
+## 2，redis解决分布式场景Session共享
 
-- 新建
-  - 当一个线程对象被创建，但还未代用start方法运行时处理**新建**状态
-  - 此时未与操作系统底层线程相关
-- 可运行
-  - 调用了start方法，就会由**新建**状态进入**可运行**
-  - 此时与底层线程关联，由操作系统调度执行
-- 终结
-  - 线程内代码执行完毕，由**可运行**进入终结
-  - 此时会取消与底层线程关联
-- 阻塞
-  - 当获取锁失败后，由**可运行**进入Monitor的阻塞队列**阻塞**，此时不占用CPU
-  - 当持锁线程放锁时，会按照一定规则唤醒阻塞队列中的**阻塞**线程，唤醒后的各线程进行竞争，最终一个线程进入**可运行状态**
-- 等待
-  - 当获取锁成功后，但由于条件不满足，调用了wait()方法，此时从可运行状态释放锁进入Monitor等待集合**等待**，同样不占用CPU时间
-  - 当其它持锁线程调用 **notify() 或 notifyAll() 方法**，会按照一定规则唤醒等待集合中的**等待**线程，恢复为**可运行**状态
-- 有时限等待
-  - 当获取锁成功后，但由于条件不满足，调用了 wait(long) 方法，此时从**可运行**状态释放锁进入 Monitor 等待集合进行**有时限等待**，同样不占用 cpu 时间
-  - 当其它持锁线程调用 notify() 或 notifyAll() 方法，会按照一定规则唤醒等待集合中的**有时限等待**线程，恢复为**可运行**状态，并重新去竞争锁
-  - 当等待超时，也会从**有时限等待**状态恢复为**可运行**状态，并重新去竞争锁
-  - **还有一种情况是调用sleep（long）方法也会从可运行状态进入有时限等待状态，**但与 Monitor 无关，不需要主动唤醒，超时时间到自然恢复为**可运行**状态
+- 将之前保存在session中的value信息保存在redis。key保存在cookie中
+- 拦截器功能：拦截需要登录的功能，判断用户是否登录，若登录，更新redis的登录用户的过期时间。**避免因为用户一直操作却自动下线的功能**
+- **登录拦截器优化**（用处不大，因为很多页面都会进行登录校验，因为登录和未登录显示界面不同）
+  - 拦截器拦截，进行登录验证。若用户登录，但只请求不需要拦截的网址。则拦截器失效。另外redis的过期时间也无法更新
+  - **解决方法：**
+    - 再设置一个拦截器，
+    - 拦截器1，所有请求均会通过，若已登录，获取用户登录信息，并更新过期时间
+    - 拦截器2，判断当前请求是否为需要登录的请求，若是且未登录拦截。
 
-**五种状态**
+## 3，redis作为缓存
 
-五种状态的说法来自于操作系统层面的划分，即**进程的状态**
+将用户数据保存到redis，获取数据时先在redis中获取，若没有则数据库获取，并保存到redis。
 
-![image-20220313182630476-16471671925531](redis.assets/image-20220313182630476-16471671925531-16473156139412.png)
+- redis自带内存淘汰机制。在内存不足时随机淘汰数据
 
-- 新建态：
-- 就绪态：有资格分配到CPU时间，但还未轮到它
-- 运行态：分到CPU时间，能真正执行线程内代码
-- 阻塞态：
-  - 涵盖了 java 状态中提到的**阻塞**、**等待**、**有时限等待**
-  - 多出了阻塞I/O，指线程在调用阻塞I/O时，实际活动由I/O设备完成，此时线程无事可做，只能等待
-- 终结态
+### 缓存一致性问题
 
-**三种状态的转换：阻塞->就绪->运行态**
+主动更新缓存和数据库来保证高一致性。更新缓存都会设置过期时间
 
-## Runnable和Callable之间的区别
+- ### 更新操作是更新缓存还是删除缓存
 
-Runnable和Callable之间的区别
+  - 更新缓存：每次更新数据库都要更新缓存，无效写操作太多
+  - **删除缓存：**更新数据库时缓存失效，查询缓存时再更新缓存
 
-1、Runnable任务执行后没有返回值；Callable任务执行后可以获得返回值
+- ### 如何保证缓存与数据库操作的同时失败与成功，保证原子性
 
-2、Runnable的方法是run()，没有返回值；Callable的方法是call()，有返回值
+  - 单体系统，将缓存与数据库放在一个事务中
+  - 分布式系统，利用AT，TCC等分布式事务方案
+
+- ### 更新操作的一致性
 
-3、**Runnable的run()方法不能抛异常，有异常的话只能在run方法里面解决；Callable的call()方法可以抛异常**
+  - 先删缓存，再操作数据库（存在线程安全问题，概率高，因为操作数据库慢，更新缓存快）
+    - 线程1先删缓存，此时线程1并未将新值保存到数据库。线程2进来查询缓存查不到，查询数据库（旧值），并写入缓存（旧值），此时线程1更新数据库（新值）   **缓存数据库不一致**
+    - ![image-20220510203623979](redis.assets/image-20220510203623979.png)
+  - **先操作数据库，再删缓存**（也存在线程安全问题，但概率低，1，查询该缓存刚好失效，2，且其他线程更新此数据，最后3，线程1慢于线程2（操作缓存慢于操作数据库））
+    - 线程1查询缓存，此时缓存失效，从数据库中查（旧值），此时线程2更新数据库（新值），并删除redis中的缓存。线程1此时更新缓存（旧值）
+    - ![image-20220510204013241](redis.assets/image-20220510204013241.png)
+
+### 高并发情况下的缓存失效问题
+
+### 缓存穿透
+
+- 客户端恶意发送请求查询缓存数据库都不存在的空值，redis没有则从数据库中查询，查询压力落在数据库。
+- **解决方法**
+  - 缓存空对象，设置短期的过期时间
+    - 优点：实现简单，维护方便
+    - 缺点：
+      额外的内存消耗（需要redis保存空值，可以设置过期时间来解决）
+      可能造成短期的不一致（此时redis保存空值，但数据库添加了该数据库，则造成了不一致）
+  - 布隆过滤
+    - 先查询布隆过滤器，若存在，再从redis和数据库中查询
+    - 原理：https://www.cnblogs.com/wangwust/p/9467720.html
+      - **布隆过滤器说某个元素存在，小概率会误判。布隆过滤器说某个元素不在，那么这个元素一定不在。**
+      - 内部维护一个全为0的bit数组，和多个hash计算函数
+      - 输入数据时，每个hash函数计算，并将每个结果值对应的数组位置置为1.
+      - 验证数据时，依然每个hash函数计算，若每个结果对应的数组位置为1，则认为存在。
+      - 数组越长，所占空间越大，误判率越低
 
-4、Runnable可以直接传递给Thread对象执行；Callable不可以，Callable执行可以放在FutureTask中，然后把futureTask传递给Thread执行
+### 缓存雪崩
 
-## 2. 线程池核心参数
+- 同一个时段，大量的缓存key同时失效，或者redis宕机，则所有的请求打到数据库，数据库压力过大
+- 解决方法：
+  - 给不同的key的过期时间添加随机值
+  - redis集群提高服务的可用性（防止redis宕机）
+  - 对缓存业务进行降级限流
 
-- 掌握线程池的 7 大核心参数
+### 缓存击穿
 
-**七大参数**
+- 热点key：高并发访问并且缓存重建业务复杂。这个key失效，则无数请求瞬间落在数据库。
+- 解决方法：
+  - **加互斥锁**，可以使用分布式锁（互斥更新是指热点key失效，多个请求只有一个请求更新，其他请求等待）
+    - 不能在方法上加锁（与单例设计模式类似），否则没有过期时由于互斥锁而导致请求过慢
+      - 只能在请求数据库时加锁。
+  - **逻辑过期**
+    - 在redis中保存一个逻辑过期时间（可以理解为一个数值，并不是真正的过期时间）
+      - value为一个类对象，对象{过期时间，值信息}
+    - 线程1请求，发现逻辑过期，则获取互斥锁，并分出一个子线程，查询数据库对缓存中的数据更新。若此时其他线程也获取该数据，发现逻辑过期，并获取不到锁，则返回旧数据
+    - ![image-20220510214524992](redis.assets/image-20220510214524992.png)
 
-- corePoolSize 核心线程数目=池中会保留的最少线程数：
-  - **在队列未满的情况下，只使用核心线程。若队列容量满了，则核心线程和救急线程共同工作**
-  - 线程池创建好，就准备就绪的线程数量，等待异步执行。**与线程池一直存在，除非设置参数allowCoreThreadTimeOut,允许线程池过期**
+## 4，Redis秒杀
 
-- maximumPoolSize 最大线程数目=核心线程+救急线程的最大数目
-- keepAliveTime 生存时间：救急线程的生存时间，生存时间内没有新任务，则此线程等待设置时间后，资源释放
-- unit 时间单位 - 救急线程的生存时间单位，如秒、毫秒等
-- workQueue ：**当没有空闲核心线程时，新来的任务会加入到此队列排队，队列满会创建救急线程执行任务**
-- threadFactory 线程工厂 - 可以定制线程对象的创建，例如设置线程名字、是否是守护线程等
-- handler 拒绝策略(饱和策略) - 当所有线程都在繁忙，workQueue 也放满时，会触发拒绝策略
-  - jdk的拒绝策略
-    - 抛异常
-    - 由调用者执行任务 
-    - 丢弃任务 
-    - 丢弃最早排队任务，本任务取而代之 
+生成唯一性ID，作为订单ID
 
-  - ActiveMQ
-    - 带超时等待（60s）尝试放入队列
+- **超卖问题**
+  - 线程1查询库存，线程2查询库存，线程1判断是否有库存，有则下单成功（只有一个商品）。线程2判断有库存（依然是只有一个商品）下单成功。导致超卖
+  - 使用乐观锁，
+    - **所以下单时，先减库存，再下订单**，下订单过程已经释放锁。
+      - 减库存时，判断是否有库存。**需要库存-1操作并且判读是否还有库存（利用数据库的原子性）。**本质为CAS，即更新操作时判断是否还有库存，若没有则下单失败。
+      - 降低占用锁的时间。
+    - **问题：**有可能会出现200个请求抢100个商品，由于CAS，只能有一个线程进行下单，导致其他线程请求失败，（请求只请求了一次）。虽然没有超卖，但造成了可能只有15个人抢到了商品，85个商品没卖出。
+    - 可以设置并发，将信号量设置为货物量，每次购买中减少信号量个数。
+  - 实现一人一单
+    - 需要确保一个用户只能秒杀一次，加悲观锁。（不能用CAS，因为先减库存，涉及不到用户信息，若CAS，导致减了库存，又发现当前用户已经购买，则再进行回滚）【先判断用户是否购买过】
+    - 也可以在redis中保存已经购买的用户信息，下库存时，先判断redis是否保存了该用户信息，若有，则无法不能再次购买
+    - 加悲观锁（不建议）**可以设置信号量，信号量为货物量，每次购买中减少信号量个数。避免了加锁的问题**
+      - 锁对象为用户ID，注意每次请求都会创建新的对象，导致锁不住。可以toString().intern()。转化成字符串并加入到串池，避免同一时刻多个下单
+      - 另外，下单时，会再次验证当前用户是否购买，若已购买，则不能重复下单
 
-**线程池重用线程时，会对ThreadLocal的值进行清空吗？**
+超卖问题什么解决？**保证 检验有库存并减库存 为原子操作就可以解决。**
 
-**不会清空，要你自己去清空。**
+我们将库存数作为Redis该商品的信号量，每次购买成功都会删减信号量，此外，使用乐观锁，解决如下问题【有可能会出现200个请求抢100个商品，由于CAS，只能有一个线程进行下单，导致其他线程请求失败，（请求只请求了一次）。虽然没有超卖，但造成了可能只有15个人抢到了商品，85个商品没卖出】，这个问题的解决是**上述。**
 
-如果你能够在使用ThreadLocal的时候管理它的创建、销毁，那么就可以用，否则会出问题。原因是ThreadLocal是和Thread绑定的，如果Thread是从Thread Pool中拿出来的，那么意味着Thread可能会被复用，如果被复用，你就一定得保证这个Thread上一次结束的时候，其关联的ThreadLocal被清空掉，否则就会串到下一次使用。
+**问题：**有可能会出现200个请求抢100个商品，由于CAS，只能有一个线程进行下单，导致其他线程请求失败，（请求只请求了一次，请求超时，则失效）。虽然没有超卖，但造成了可能只有15个人抢到了商品，85个商品没卖出。
 
+我们将库存数作为Redis该商品的信号量，每次购买成功都会删减信号量，信号量为我们允许的并发数。并且只进行减库存操作，将消息交给消息队列，进行流量削峰，并且降低占用锁的时间。
 
+实现一人一单，下订单时，先检验是不是已经购买过了，若是购买了则不能进行购买。
 
 
 
-**工作流程**：
+### 秒杀商品购买
 
-- 线程池创建，线程池中会创建core数量的核心线程，准备接收任务
-- 核心线程满了，将再进来的任务放入阻塞队列，空闲的线程会在阻塞线程中获取任务
-- **若阻塞也满了，则创建救急线程执行任务，此时救急线程新创建执行的任务是刚进来的任务而不是阻塞队列中的任务，执行完该任务后，从阻塞队列中获取任务**，线程总量只能是maximumPoolSize 数目
-- 若已经达到最大线程数目，且阻塞队列也满了，则执行拒绝策略
-- 线程执行完毕
-- 若任务执行完，等待一定的存活时间，救急线程注销
+- ## 高并发问题
 
+  - **服务单一职责：**
+    将每个功能作为一个微服务进行独立部署
+  - **秒杀链接加密：**
+    下单链接加上随机码，只有在秒杀活动开启后才能获取
+  - **库存预热：**
+    提前加入到redis中。信号量控制请求进来的秒杀请求
+  - **动静分离，**
+    Nginx实现动静分离，静态页面的获取直接在Nginx中获取，不会落到后端服务器上。动态请求来到后端服务器
+  - **恶意请求拦截：**
+    识别非法攻击请求并进行拦截，网关层面
+  - **流量错峰：**
+    购买秒杀商品，需要加入购物车才能购买，避免了直接购买而导致的高并发请求。加入购物车，用户的操作的快慢不一致，可以实现流量错峰。
+  - **限流&熔断&降级**
+  - **队列削峰**
 
+- **秒杀商品购买流程**
 
+  1. 立即抢购商品，发送请求，该商品随机码，秒杀商品号（redis的key），数量
+  2. 秒杀微服务：
+     1. 获取当前秒杀商品的详细信息
+     2. 校验合法性（时间合法性，随机码一致性，购物数量是否合理）**恶意请求拦截，秒杀链接加密：**
+     3. 该用户是否购买过该秒杀商品，redis保存临时信息。设置过期时间，过期时间为秒杀活动结束时间【此时已经保存了用户信息】
+     4. 生成订单号，对信号量进行扣除（信号量为该秒杀商品的总数），没有信号量则无法进行购买
+     5. 生成MQ通知订单服务生成订单。**队列削峰**
+     6. **订单微服务生成订单后，转发到订单请求结果页面**
+        1. 若抢购成功，显示生成订单号和和5秒后跳转支付请求，也可以立即支付链接。到支付页面。（**流量错峰：**）
 
+  调用MQ进行削峰
 
-## **execute和submit的区别**
+  创建订单成功后，有直接去支付按钮，请求中携带这订单号。
 
-- execute只能提交Runnable类型的任务，无返回值。submit既可以提交Runnable类型的任务，也可以提交Callable类型的任务，会有一个类型为Future的返回值，但当任务类型为Runnable时，返回值为null。
-- execute在执行任务时，如果遇到异常会直接抛出，而submit不会直接抛出，只有在使用Future的get方法获取返回值时，才会抛出异常。
 
 
+## 5，分布式锁
 
-## 线程池获取返回值
+**向redis保存值作为锁，分布式的服务中加锁**
 
-```java
-ThreadPoolExecutor executor = new ThreadPoolExecutor();
-Future<Integer> submit = executor.submit(() -> {
-    return 1;
-});
-Integer integer = submit.get();
-```
+- **上锁**（向redis保存值，并设置过期时间（原子指令）。setnx ex）
 
+  - 使用setnx ：保存该key，value。若该key不存在才保存，否则执行失败
+  - **设置过期时间**：避免因为上锁后，线程出现异常，无法释放锁。
+  - **保存锁值，设置过期时间为一条指令**：避免在保存锁值后，设置过期时间时出现异常，则锁一直存在。
 
+- **释放锁**（校验要删除的value是否与保存的value是否一致，一致再删除，不一致，则视为为已经删除。使用lua脚本）
 
-## JAVA 分析线程池中的keepAliveTime参数具体实现
+  - **校验value：**占有该锁时，线程执行时间过长，或者陷入阻塞，此期间锁过期，线程未执行完。则其他线程开始获取该锁，并进行业务操作。多个线程持有锁
+    - 保存锁的value值不能为随意值。设置value：UUID+特征符号。UUID可以避免分布式下多个特征符号相同，导致value相同的情况。
+  - **删除锁必须保证原子性。使用redis+Lua脚本完成：**若判断锁存在，此时陷入阻塞，此期间锁过期，其他线程竞争到了锁。该线程恢复运行时，会执行删除锁操作。删除了其他线程的锁
 
-https://blog.csdn.net/a17816876003/article/details/107682030
+- **Lua脚本**：![image-20220511162024788](redis.assets/image-20220511162024788.png)
 
-- 从阻塞队列中获取元素是调用poll（）方法，移除队头的元素
+- **Redisson**，在redis基础上实现的Java的内存操作，包含多种分布式Java对象，其中就有分布式锁，**有实现锁重入，锁重试，信号量**
 
-  - poll 方法作用是移除并返回队列的头节点。但是如果当队列里面是空的，没有任何东西可以移除的时候，便会返回 null 作为提示。
-
-  - 带时间参数的 poll 方法：如果能够移除，便会立刻返回这个节点的内容；如果队列是空的就会进行等待，等待时间正是我们指定的时间，直到超时时间到了，如果队列里依然没有元素可供移除，便会返回 null 作为提示。
-
-- **阻塞队列的poll方法又是怎么实现超时的呢？**
-
-  - poll（）方法 调用了available.awaitNanos(delay)方法
-  - 其内部执行了UNSAFE.park(false, nanos);
-
-## 关闭线程池
-
-- ### 关闭线程池 shutdown 和 shutdownNow 的区别
-
-- shutdown：调用 shutdown() 方法后线程池会在执行完正在执行的任务和队列中等待的任务后才彻底关闭。
-
-- shutdownNow：
-
-- shutdown 会等待线程池中的任务执行完成之后关闭线程池，而 shutdownNow 会给所有线程发送中断信号，中断任务执行，然后关闭线程池
-
-  shutdown 没有返回值，而 shutdownNow 会返回关闭前任务队列中未执行的任务集合（List）
-
-## 关闭线程的方式
-
-https://www.cnblogs.com/liyutian/p/10196044.html
-
-1. 使用退出标志，使线程正常退出，也就是当 run() 方法完成后线程中止。
-
-2. 使用 stop() 方法强行终止线程，但是不推荐使用这个方法，该方法已被弃用。
-
-   1. stop（）会停止run（）方法剩余的全部工作，包括在 catch 或 finally 语句中的，并抛出ThreadDeath异常(通常情况下此异常不需要显示的捕获)，因此可能会导致一些清理性的工作的得不到完成，如文件，数据库等的关闭。
-   2. 调用 stop() 方法会立即释放该线程所持有的所有的锁，导致数据得不到同步，出现数据不一致的问题。
-
-3. 使用 interrupt 方法中断线程。
-
-   1. 调用 interrupt() 方法仅仅是在当前线程中打一个停止的标记，并不是真的停止线程。
-
-      也就是说，线程中断并不会立即终止线程，而是通知目标线程，有人希望你终止。至于目标线程收到通知后会如何处理，则完全由目标线程自行决定
-
-## 写一个死锁
-
-- 线程1，先抢占锁1，thread.sleep(50ms)   ,再抢占锁2
-- 线程2，先抢占锁2，thread.sleep(50ms)   ,再抢占锁1
-
-## 阻塞队列中线程取消竞争锁
-
-lock.lockInterruptibly()  方法
-
-https://www.jianshu.com/p/287c9f3ae16d
-
-![image-20220822092747062](redis.assets/image-20220822092747062-166113166872018.png)
-
-## JDK中的七大阻塞队列
-
-- ArrayBlockingQueue：由数组实现的有界阻塞队列，需要指定数组容量，该队列按照 FIFO 对元素进行排序。维护两个整形变量，标识队列头尾在数组中的位置，在生产者放入和消费者获取数据共用一个锁对象，意味着两者无法真正的并行运行，性能较低。
-- LinkedBlockingQueue：由链表组成的有界阻塞队列，如果不指定大小，默认使用 Integer.MAX_VALUE 作为队列大小，该队列按照 FIFO 对元素进行排序，对生产者和消费者分别维护了独立的锁来控制数据同步，意味着该队列有着更高的并发性能。
-- SynchronousQueue：不存储元素的阻塞队列，无容量，可以设置公平或非公平模式，插入操作必须等待获取操作移除元素，反之亦然。
-- PriorityBlockingQueue：支持优先级排序的无界阻塞队列，默认情况下根据自然序排序，也可以指定 Comparator。
-- DelayQueue：支持延时获取元素的无界阻塞队列，创建元素时可以指定多久之后才能从队列中获取元素，常用于缓存系统或定时任务调度系统。
-- LinkedTransferQueue：一个由链表结构组成的无界阻塞队列，与LinkedBlockingQueue相比多了transfer和tryTranfer方法，该方法在有消费者等待接收元素时会立即将元素传递给消费者。
-- LinkedBlockingDeque：一个由链表结构组成的双端阻塞队列，可以从队列的两端插入和删除元素。
-
-## jdk中非阻塞队列
-
-ConcurrentLinkedQueue 利用循环CAS来实现线程安全。它是一个基于链表的无界线程安全队列。
-
-
-
-
-
-
-
-## 3. wait vs sleep
-
-**要求**
-
-* 能够说出二者区别
-
-**一个共同点，三个不同点**
-
-共同点
-
-* wait() ，wait(long) 和 sleep(long) 的效果都是让当前线程暂时放弃 CPU 的使用权，进入阻塞状态
-
-不同点
-
-* 方法归属不同
-  * sleep(long) 是 Thread 的静态方法
-  * 而 **wait()，wait(long) 都是 Object 的成员方法**，每个对象都有
-
-* 醒来时机不同
-  * 执行 sleep(long) 和 wait(long) 的线程都会在等待相应毫秒后醒来
-  * wait(long) 和 wait() 还可以被 notify 唤醒，wait() 如果不唤醒就一直等下去
-  * 它们都可以被打断唤醒
-
-* 锁特性不同（重点）
-  * wait 方法的调用必须先获取 wait 对象的锁，而 sleep 则无此限制
-  * wait 方法执行后会释放对象锁，允许其它线程获得该对象锁（我放弃 cpu，但你们还可以用）
-  * 而 sleep 如果在 synchronized 代码块中执行，并不会释放对象锁（我放弃 cpu，你们也用不了）
-
-## 4. lock vs synchronized
-
-**三个层面**
-
-不同点
-
-* 语法层面
-  * synchronized 是关键字，源码在 jvm 中，用 c++ 语言实现
-  * Lock 是接口，源码由 jdk 提供，用 java 语言实现
-  * 使用 synchronized 时，退出同步代码块锁会自动释放，而使用 Lock 时，需要手动调用 unlock 方法释放锁。【即获取到锁后出现异常，则synchronize会自动释放锁，而lock需要手动释放】
-  * **synchronized 不可被打断**
-* 功能层面
-  * 二者均属于悲观锁、都具备基本的互斥、同步、锁重入功能
-  * Lock 提供了许多 synchronized 不具备的功能，例如获取等待状态、公平锁、可打断、可超时、多条件变量
-  * Lock 有适合不同场景的实现，如 ReentrantLock， ReentrantReadWriteLock
-  * 二者的锁机制其实也是不一样的。ReentrantLock 底层调用的是 Unsafe 的park 方法加锁，synchronized 操作的应该是对象头中 mark word
-* 性能层面，或者说适用场景不同
-  * 在没有竞争时，synchronized 做了很多优化，如偏向锁、轻量级锁，性能不赖  （jdk1.6以后）
-  * 在竞争激烈时，Lock 的实现通常会提供更好的性能
-
-**公平锁**
-
-* 公平锁的公平体现
-  * **已经处在阻塞队列**中的线程（不考虑超时）始终都是公平的，先进先出
-  * 公平锁是指**未处于阻塞队列**中的线程来争抢锁，如果队列不为空，则老实到队尾等待
-  * 非公平锁是指**未处于阻塞队列**中的线程来争抢锁，与队列头唤醒的线程去竞争，谁抢到算谁的
-* 公平锁会降低吞吐量，一般不用
-
-**条件变量**
-
-- ReentrantLock中的条件变量功能类似于普通synchronized的wait，notify，用在当前线程获得锁后，发现条件不满足时，进入临时等待的链表结构
-- 与 synchronized 的等待集合不同之处在于，ReentrantLock 中的条件变量可以有多个，可以实现更精细的等待、唤醒控制
-
-## 5. volatile
-
-
-
-**原子性**
-
-- 起因：多线程下，不同线程的**指令发生了交错**导致的共享变量的读写混乱
-- 解决：用悲观锁或乐观锁解决，**volatile 并不能解决原子性**
-
-**可见性**
-
-* 起因：由于**编译器优化、或缓存优化、或 CPU 指令重排序优化**导致的对共享变量所做的修改另外的线程看不到
-* 起因应该是：线程对公共变量操作时，首先从公共内存加载到线程本地内存，再进行操作，导致各个线程的操作是不可见的。
-* 解决：**用 volatile 修饰共享变量，能够防止JIT编译器等优化发生，让一个线程对共享变量的修改对另一个线程可见**
-
-**有序性**
-
-- 起因：由于**编译器优化、或缓存优化、或 CPU 指令重排序优化**导致指令的实际执行顺序与编写顺序不一致
-
-- 解决：**用volatile修饰共享变量会在读，写共享变量时加入不同的屏障，阻止其他读写操作越过屏障，从而达到阻止重排的效果**
-
-- 注意：
-
-  对volatile变量的写指令**后会加入写屏障**
-
-  对volatile变量的读指令**前会加入读屏障**
-
-  - **volatile 变量写屏障**阻止的是阻止前面其他写操作越过屏障排到**volatile 变量写后面**（这句话和上面的写指令后会加入写屏障并不冲突，因为写屏障使得写屏障前的代码不能越过屏障到后面，**但不能阻止后面的屏障到面前来，读屏障类似**）
-  - **volatile 变量读屏障**阻止的是阻止后面的其他读操作越过屏障排到 **volatile 变量读前面**
-  - volatile 读写加入的屏障只能防止同一线程内的指令重排
-
-  （**所以读写屏障的插入应该是在所有写操作之后，所有读操作之前**）
-
-内存屏障：
-
-是CPU或编译器在对内存随机访问的操作中的一个同步点，使得此点之前的所有读写操作都执行后才可以开始执行此点之后的操作。**简单说就是加入内存屏障，则之前的读写操作全部执行后再执行内存屏障后的代码。内存屏障为一个同步点，点之前的代码执行完，再执行点之后的代码**
-
-## volatile和synchronized的区别
-
-1. volatile本质是在告诉jvm当前变量在寄存器（工作内存）中的值是不确定的，需要从主存中读取； synchronized则是锁定当前变量，只有当前线程可以访问该变量，其他线程被阻塞住。所以volatile是与synchronize是互助的存在，不是对立的
-2. volatile仅 修饰 在变量级别；synchronized则可以使用在代码段，方法上。
-3. volatile仅能实现变量的修改可见性，不能保证原子性；而synchronized则可以保证变量的修改可见性和原子性
-4. volatile不会造成线程的阻塞；synchronized可能会造成线程的阻塞。
-5. volatile标记的变量不会被编译器优化；synchronized标记的变量可以被编译器优化，实现锁消除
-
-
-
-## 6. 悲观锁 vs 乐观锁
-
-**要求**
-
-* 掌握悲观锁和乐观锁的区别
-
-**对比悲观锁与乐观锁**
-
-* 悲观锁的代表是 synchronized 和 Lock 锁
-  * 其核心思想是【线程只有占有了锁，才能去操作共享变量，每次只有一个线程占锁成功，获取锁失败的线程，都得停下来等待】
-  * 线程从运行到阻塞、再从阻塞到唤醒，涉及线程上下文切换，如果频繁发生，影响性能
-  * 实际上，线程在获取 synchronized 和 Lock 锁时，如果锁已被占用，都会做几次重试操作，减少阻塞的机会
-
-* 乐观锁的代表是 AtomicInteger |e toa mi ke  Integer|，使用 cas 来保证原子性
-  * 其核心思想是【无需加锁，每次只有一个线程能成功修改共享变量，其它失败的线程不需要停止，不断重试直至成功】
-  * 由于线程一直运行，不需要阻塞，因此不涉及线程上下文切换
-  * 它需要多核 cpu 支持，且线程数不应超过 cpu 核数
-
-AtomicInteger 的底层实现使用的是Unsafe，保证操作的原子性
-
-## 如何判断是否当前线程持有该锁
-
-- 如果用synchronized，用`Thread.holdsLock(lockObj)` 获取
-- 如果使用 Lock（juc下的），则用 `lock.isHeldByCurrentThread()` (**不能用 Thread.holdsLock(lockObj)**)
-
-## 线程间同步的方式
-
-**互斥锁**（Mutex）、**条件变量**（condition variable）、**读写锁**（reader-writer lock）、**信号量**（semaphore）
-
-
-
-## 线程通信的方式
-
-- volatile 
-- synchronized 临界区方式，ReentrantLock
-- CountDownLatch
-- 基本LockSupport实现线程间的阻塞和唤醒（park和unpark方法）
-- 网络通信
-- 信号量机制(Semaphore)
-- 管道通信
-
-
-
-
-
-
-
-## 7. Hashtable vs ConcurrentHashMap
-
-**Hashtable 对比 ConcurrentHashMap**
-
-* Hashtable 与 ConcurrentHashMap 都是线程安全的 Map 集合
-* Hashtable 的底层是数组+链表，ConcurrentHashMap 底层是`Node 数组 + 链表或红黑树`
-* Hashtable 并发度低，整个 Hashtable 对应一把锁，同一时刻，只能有一个线程操作它
-* ConcurrentHashMap 并发度高，整个 ConcurrentHashMap 对应多把锁，只要线程访问的是不同锁，那么不会冲突
-* CurrentHashMap不能存储null值，不论是key还是value。
-
-**ConcurrentHashMap 1.7**
-
-* 数据结构：`ReentrantLock+Segment分段数组 + HashEntry数组 + 链表`，每个 Segment 对应一把锁，如果多个线程访问不同的 Segment，则不会冲突。（Segment数组中包含HashEntry数组，其内部有链表），**Segment继承了ReentrantLock**
-* 并发度：Segment 数组大小即并发度，决定了同一时刻最多能有多少个线程并发访问。Segment 数组不能扩容，意味着并发度在 ConcurrentHashMap 创建时就固定了。**Segment数组的大小size默认为** DEFAULT_CONCURRENCY_LEVEL =**16(阿里面试官曾问过)** HashEntry数组默认为2个。
-* 索引计算
-  * 假设大数组长度是 $2^m$​，key 在大数组内的索引是 key 的二次 hash 值的高 m 位（二进制hash值的高M位）
-  * 假设小数组长度是 $2^n$​，key 在小数组内的索引是 key 的二次 hash 值的低 n 位（二进制hash值的低n位）
-* **put新节点时，若是超出阈值，则会先进行扩容，再添加新节点**
-* **并发GET操作**
-  * ConcurrentHashMap第一次需要经过一次hash定位到Segment的位置，然后再hash定位到指定的HashEntry，遍历该HashEntry下的链表进行对比，成功就返回，不成功就返回null
-  * **get操作没有加锁**
-  * 使用Unsafe类保证可见性，因为数组某个位置的值改变，volatile只能保证整个数组的可见性，而数组中某个值的需要改变通过Unsafe类保证。Unsafe.getObjectVolatile(数组，下标)。获取指定位置的volatile值
-  * 扩容时，若get先进行，则从旧表中取。get后发生则从新表中取
-
-* **并发put操作**
-  * 第一次key的hash来定位segment的位置。若Segment没有初始化，则CAS进行初始化操作
-  * 第二次hash操作找到相应的hashEntry的位置
-  * 继承了ReentrantLock，通过tryLock（）尝试获取锁，成功则插入元素。
-  * 失败，则以**自旋的方式**去调用 tryLock（）方法去获取锁，超过指定次数则挂起，等待唤醒
-* **size**
-  * 计算元素个数前，先不加锁计算两次，如果前后两次结果如一样，认为个数正确返回
-  * 如果不一样，进行重试，重试次数超过 3，将所有 segment 锁住，重新计算个数返回
-
-
-
-
-* **扩容：**每个小数组的扩容相对独立，小数组在超过扩容因子时会触发扩容，每次扩容翻倍（扩容时，一般情况下是头插法，遍历链表。若链表中，在某个节点以及后续节点与扩容后仍在一个链表，则之间将剩余链表迁移，不必挨个遍历头插法）
-* Segment[0] 原型：首次创建其它小数组时，会以此原型为依据，数组长度，扩容因子都会以原型为准
-
-**ConcurrentHashMap 1.8**
-
-* 数据结构：`syncronized+CAS+Node 数组 + 链表或红黑树`，数组的每个头节点作为锁，如果多个线程访问的头节点不同，则不会冲突。**首次生成头节点时如果发生竞争，利用 cas 而非 syncronized**，进一步提升性能
-
-* 并发度：Node 数组有多大，并发度就有多大，与 1.7 不同，Node 数组可以扩容
-
-* 扩容条件：Node 数组满 3/4 时就会扩容
-
-* 扩容单位：以链表为单位从后向前迁移链表，迁移完成的将旧数组头节点替换为 ForwardingNode。**七上八下**
-
-* **并发 get**
-
-  * 根据是否为 ForwardingNode**（一种标记，是 ForwardingNode代表该数组位置已经迁移结束）**来决定是在新数组查找还是在旧数组查找，不会阻塞
-  * 如果链表长度超过 1，则需要对节点进行复制（创建新节点），怕的是节点迁移后 next 指针改变
-  * 如果链表最后几个元素扩容后相对位置不变，则节点无需复制
-
-* **并发 put**
-
-  * 首先通过hash找到对应位置，判断是否初始化了，没有初始化怎么调用initTable方法进行初始化。因为是懒惰初始化，省内存
-  * 如果没有hash冲突，则直接CAS方式插入
-  * 如果还在扩容，则先扩容，再插入元素（链表超过阈值8则进行转换成红黑树）
-  * **如果存在hash冲突**，则加锁（synchronize）保证线程安全，
-    * 链表结构则直接遍历到尾端插入
-    * 红黑树按红黑树结构插入
+  - **锁重入**：利用hash结构记录线程id和重入次数
+    - 借鉴的AQS，将键值对的分布式锁改为hash形式。key获取hash，hash的key为线程，value为status（当前线程持有锁个数，进行锁重入）
+    - 获取锁和释放锁使用lua脚本。
+    - **持有锁：**首先判断是否有其他线程占有锁，若占有，则判断是否为当前线程，status+1，进行锁重入。并重置有效期
+    - **释放锁：**获取锁，判断锁是否是自己占有的锁，若是则status-1，重置锁有效期。若status为0，释放锁，删除hash。否则锁已经释放
+  - **可重试**：使用信号量和发布订阅功能实现等待，唤醒，获取，锁失败的重试机制
+  - **超时续约**：利用watchDog，每隔一段时间（releaseTime / 3），重置超时时间
+    - 看门狗即 创建一个守护线程，每隔一段时间进行校验，判断是否过期
 
   
 
-  
+## Redis的持久化机制
 
-  
+- **RDB**： Redis DataBase将某一时刻的内存快照，以二进制的方式将**数据**写入磁盘
 
+  - 手动触发
+    - save命令，是Redis处于阻塞状态，直到redis持久化完成，才会继续响应客户端请求（慎用）
+    - bgsave命令，fork出一个子进程执行持久化，主进程会在fork过程（分出一个子进程）中有短暂的阻塞，子进程创建后，主进程就可以响应客户端请求（由于子进程持久化过程与主进程读写数据并行执行，使用COW（copy  all write  写时拷贝）避免因为主进程修改数据，使得子进程的持久化出现错误，父进程将要修改的内容copy出一个备份，在备份中操作，持久化完成后，写入父子进程的共享内存）
+  - 自动触发
+    - save m n：在m秒内，如果有n个键发生改变，则自动触发持久化，通过bgsave执行，如果设置多个，只要满足一个，则出触发持久化。
+    - flushall：清空redis所有数据库的内容，flushdb清空当前redis所在库，会清空reb文件，生成新的dump.rdb,内容为空
+    - 主从复制：全量同步时会自动出发bgsave命令，自动生成rdb发动给从节点
 
-  * 首先判断map是否为空。**空表示没有进行初始化，初始化Map，因为是懒惰初始化，省内存**
-  * 如果 put 的线程与扩容线程正在迁移的链表为同一个，put 线程会阻塞【不是重点】
-  * 如果 put 的线程操作的链表还未迁移，即该链表还未迁移（还没轮到该链表迁移），则可以并发执行【不是重点】
-  * 如果 put 的线程操作的链表（在旧map中）已经迁移完成，则协助扩容，等扩容完成后，再从扩容后的map中put。（也是考虑插入数据的顺序，先进来的元素可能也与正要put的元素在一个链表，为维护链表的相对位置，所以需要等待扩容完成）【不是重点】
+  **优点**
 
-* 与 1.7 相比是懒惰初始化**（只有在储存元素时才会创建对象）**
+  1. 整个redis数据库只有一个dump.rdb文件，方便持久化
+  2. 容灾性好，方便备份
+  3. 性能最大化，fork子进程来完成写操作，让主进程继续处理命令，保证了IO最大化（并行执行），使用子进程进行持久化，主进程不会进行任何IO操作（写时拷贝），保证了reids的高性能。
+  4. 相对于数据集大时，比AOF的启动效率更高
 
-* 并发初始化table，原子操作【不知道在干嘛】
+  **缺点**
 
-  * 设置一个变量sc
-  * 进入循环，条件table=null。
-    * if判断若sc<0,则yield，让出CPU时间片
-    * else if：CAS操作，将sc赋值-1，加锁操作，其他线程进来，会进入第一个if判断。内部创建table。sc=正值。
-    * 释放锁，退出循环
+  1. 数据安全性低，RDB是间隔一段时间持久化，若持久化期间发生故障，则数据丢失。
+  2. 若降低间隔时间，则fork子进程操作频繁，则阻塞次数过多，则阻塞时间也会变长  （2,3好像是一个意思）
+  3. 若数据集较大，fork子进程会占用CPU时间过长，可能导致服务器停止服务几百毫秒，甚至1s
 
-* put操作时，增加数值。统计size。1.8使用synchronized 进行加锁
+- **AOF**：以日志的形式记录redis所处理的每一个**修改操作**，以文本的方式记录。（**redis默认不开启**）
 
-  * 与LongAddr类似，有一个累加单元数组，put时的+1操作会对某个cell单元进行CAS操作
-  * 累加单元数组是懒初始化，累加单元也是懒初始化操作。所以需要判断两次
-  * CAS累加操作
-  * 若此时size超出阈值，进行扩容
-  * **求取size时，遍历所有的累加单元，可能存在误差，因为遍历时，其他线程可能还在操作**
+  - 流程
+    1. 所有修改命令会append追加到AOF缓冲末尾
+    2. AOF缓冲区根据对应的**策略**刷盘
+    3. rewrite模式：随着修改操作的增加，AOF会定期进行重写，将多条指令合并，达到压缩的目的
+    4. redis重启，加载aof可以进行数据恢复
+  - 刷盘策略（和MySQL相似）
+    - 每秒同步：异步完成，效率非常高，一旦系统出现宕机，则最多丢失1s修改的数据
+    - 修改同步：每次修改操作，都会刷新到磁盘。最多丢失一条
+    - 不同步：将要刷盘的内容交给操作系统，由操作系统决定什么时候刷盘
+  - **优点**
+    - 数据安全
+    - 通过append模式写文件，即使由于服务器宕机也不会损坏已经写入的内容，可以通过redis-check-aof工具解决数据一致性问题
+      - **append表示追加数据，并不会影响文件之前的数据，这样读写速度会快一些，而且不会损坏已经写入的数据**
+    - AOF机制的rewrite模式，定期对AOF文件进行重写，以达到压缩的目的
+  - **缺点**
+    - AOF文件比RDB文件大，且恢复速度慢
+    - 数据集大的时候，比rdb启动效率低
+    - **运行效率没有rdb高**
 
-  
+**AOF与RDB对比**
 
-* capacity 代表预估的元素个数，capacity / factory 来计算出初始数组大小，需要贴近 $2^n$ 
+- AOF文件比RDB更新频率高，优先使用AOF还原数据
 
-* loadFactor 只在计算初始数组大小时被使用，之后扩容固定为 3/4，**不可修改**
-  **（意思是，扩容因子，只有在初始创建的时候才会用到，后面的扩容依然为jdk设置的0.75）**
+- AOF比RDB更安全也更大
 
-* 超过树化阈值时的扩容问题，如果容量已经是 64，直接树化，否则在原来容量基础上做 3 轮扩容
+- RDB性能比AOF好
 
-**ConcurrentHashMap 1.7和1.8的区别**
+- 如果两个都搭配，优先加载AOF
 
-https://blog.csdn.net/xuxinyuande/article/details/105738873
 
-**区别**
 
-https://blog.csdn.net/xingxiupaioxue/article/details/88062163
 
-(1) 从1.7到1.8版本，由于HashEntry从链表 变成了红黑树所以 concurrentHashMap的时间复杂度从O(n)到O(log(n))
 
-(2)  HashEntry最小的容量为2
+## Redis集群方案
 
-(3)Segment的初始化容量是16;
+- 主从模式
+  - 这种模式较为简单，主库可以读写，并会和从库进行数据同步，这种模式下，客户端直连接主库或某个从库，若主库或者从库宕机，客户端需要手动修改IP，另外这种模式下也比较难进行扩容，整个集群所能存储的数据受到某台机器的内存容量限制，所以不能支持特大数据量。
+  - 不具备自动容错与恢复功能，master或slave的宕机都可能导致客户端请求失败，需要等待机器重启或手动切换客户端IP才能恢复
+- 哨兵模式
+  - 这种模式是主从模式的升级版，主机宕机后，哨兵会发现主库节点宕机，然后在从库中选择一个库作为主库继续，另外哨兵也可以做集群，从而保证某一个节点宕机后，还有其他哨兵节点可以继续工作。这种模式可以很好的保证redis集群的高可用，但仍不能很好的解决redis容量上限问题
+- 分片集群（Cluster模式）
+  - Cluster模式支持多主多从，这种模式可以按照key进行槽位分配，可以使得不同key分散到不同的主节点上，利用这种模式可以使得整个集群支持更大的数据容量，同时每个主节点可以拥有自己的多个从节点，如果该节点宕机，会从它的从节点再选举一个新的主节点
+- 如果redis要存的数据量不大，可以选择哨兵模式，如果redis要存的数据量大，需要持续扩容，则选择cluster模式
 
-(4)HashEntry在1.8中称为Node,链表转红黑树的值是8 ,当Node链表的节点数大于8时Node会自动转化为TreeNode,会转换成红黑树的结构
 
 
+### 主从模式
 
-JDK1.8为什么使用内置锁synchronized来代替重入锁ReentrantLock？
+**单节点redis的并发能力是有限的，要进一步提高redis的并发能力，搭建Redis集群**
 
-因为粒度降低了，在相对而言的低粒度加锁方式，synchronized并不比ReentrantLock差，在粗粒度加锁中ReentrantLock可能通过Condition来控制各个低粒度的边界，更加的灵活，而在低粒度中，Condition的优势就没有了
-JVM的开发团队从来都没有放弃synchronized，而且基于JVM的synchronized优化空间更大，使用内嵌的关键字比使用API更加自然
-在大量的数据操作下，对于JVM的内存压力，基于API的ReentrantLock会开销更多的内存，虽然不是瓶颈，但是也是一个选择依据
+- **Replication Id**：简称replid，是数据集的标记，id一致则说明是同一数据集。每一个master都有唯一的replid，slave则会继承master节点的replid
+- **offset**：偏移量，随着记录在repl_baklog中的数据增多而逐渐增大。slave完成同步时也会记录当前同步的offset。如果slave的offset小于master的offset，说明slave数据落后于master，需要更新。
 
+**主从模式**（读写分离）
 
+- **步骤**
 
-**ConcurrentHashMap 的使用场景**
+  - ### 全量同步（发生在第一次主从同步）
 
-- 存储地址的code码和名称的映射关系，存储在concurrentHashMap中
-- key：code码  Value 存储 名称和过期时间。默认是超过1天查最新的数据
+    - （速度慢，性能较差，尽量避免）
+    - 第一阶段：**判断是否为第一次请求数据同步，**
+      - slave请求增量同步，写携带replid和偏移量
+      - master判断请求replid是否与自己的一致，第一次请求一定不一致因为slave原来的replid可能是自己的或之前的master的。
+      - 不一致，返回主节点的replid和偏移量
+    - master执行bgsave生成的RDB发送给slave，slave清空本地数据并加载rdb
+    - 在生成rdb期间执行的所有命令写入repl_baklog日志，
+    - 持续的将日志发送给slave，slave执行命令保持同步
+    - ![image-20220511210222844](redis.assets/image-20220511210222844.png)
 
+  - ### 增量同步（速度较快）
 
+    - 若slave重启，重启后第一次连接，使用增量同步，只更新slave与master有差异的部分（性能较好）
+    - 步骤
+      - slave请求发送replid和偏移量，master判断replid一致，使用增量同步。
+      - 从repl_backlog中找到slave的offset对应位置后的数据，发给slave
 
-## 为什么ConcurrentHashMap 的key，value不允许为null？map允许？
+  - ### repl_backlog
 
-ConCurrentHashMap是在多线程场景下使用的，如果ConcurrentHashMap.get(key)的值为null，那么无法判断到底是key对应的value的值为null还是不存在对应的key值。
+    - 固定大小的数组，是环形的，角标到达数组末尾后，会再次从0开始读写，覆盖原来的数据。
+    - repl_baklog中会记录Redis处理过的命令日志及offset，包括master当前的offset，和slave已经拷贝到的offset：
+    - 增量同步时，将slave与master差异的数据发给slave
+    - ![image-20220511212156352](redis.assets/image-20220511212156352.png)
+    - 若slave与master差异过大，导致master覆盖了slave设置的offset的位置数据，则只能做**全量同步**
 
-存在二义性：
+  - **优化主从集群**
 
-- 可能这个map不存在这个key
-- 可能map是存在这个key，value的，但value为null。
+    - 在master中配置repl-diskless-sync yes启用无磁盘复制，直接网络发送到slave，避免全量同步时的磁盘IO。（适用于IO慢，网络快的情况）
+    - Redis单节点上的内存占用不要太大，减少RDB导致的过多磁盘IO
+    - 适当提高repl_baklog的大小，发现slave宕机时尽快实现故障恢复，尽可能避免全量同步
+    - 限制一个master上的slave节点数量，如果实在是太多slave，则可以采用主-从-从链式结构，减少master压力
+      - ![image-20220511213002924](redis.assets/image-20220511213002924.png)
 
-**所以当map.get(key)返回的值是null，在HashMap中虽然存在二义性，但是结合containsKey方法可以避免二义性。**
+  **简述全量同步和增量同步区别？**
 
-虽然concurrentHashMap也可以调用containsKey进行判断，但是concurrentHashMap是多线程的操作集合，中间有时间间隔。主要是为了线程安全。
+  - 全量同步：master将完整内存数据生成RDB，发送RDB到slave。后续命令则记录在repl_baklog，逐个发送给slave。
+  - 增量同步：slave提交自己的offset到master，master获取repl_baklog中从offset之后的命令给slave
 
-- 例：若concurrentHashMap没有保存该key-value，此时获取key，value=null，再判断是否含有key，此时另一个插入了该key-value，则出现了差错。
+  **什么时候执行全量同步？**
 
+  - slave节点第一次连接master节点时
+  - slave节点断开时间太久，repl_baklog中的offset已经被覆盖时
 
+  **什么时候执行增量同步？**
 
+  - slave节点断开又恢复，并且在repl_baklog中能找到offset时
 
 
-## 8.ThreadLocal
 
-* ThreadLocal 可以实现【资源对象】的线程隔离，让每个线程各用各的【资源对象】，避免争用引发的线程安全问题
-* ThreadLocal 同时实现了线程内的资源共享，**即各个方法内的共享**
+- 特点：
+  - 只有一个master，master可以读写数据，执行写操作，将要出现变化的数据自动同步到slave
+  - slave只能读数据，可以有多个slave
+  - **数据的复制是单向的，只能从主节点到从节点，即Master以写为主，slave以读为主**
 
-**原理**
+**主从复制的作用：**
 
-每个线程内有一个 ThreadLocalMap 类型的成员变量，用来存储资源对象**（ThreadLocalMap是线程独立的）**
+1. 数据冗余：主从复制实现数据的备份，是持久化之外的一种数据冗余方式
+2. 故障恢复：党主节点出现问题，可以由从节点提供服务，实现快速的故障恢复，实际上是一种服务的冗余
+3. 负载均衡：在主从复制基础上，配合读写分离，可以由主节点提供写服务，由从节点提供读服务（即写redis数据时应用连接主节点，读redis数据时应用连接从节点），分担服务器负载，尤其是在写少读多的情景下，通过多个从节点分担读负载，可以大大提高redis服务器的并发量
+4. 高可用基石：主从复制是哨兵和集群能够实施的基础，因此说主从复制是Redis高可用的基础
 
-* 调用 set 方法，就是以 ThreadLocal 自己作为 key，资源对象作为 value，放入当前线程的 ThreadLocalMap 集合中
-* 调用 get 方法，就是以 ThreadLocal 自己作为 key，到当前线程中查找关联的资源值
-* 调用 remove 方法，就是以 ThreadLocal 自己作为 key，移除当前线程关联的资源值
+![Image](redis.assets/Image.png)
 
+**具体：**
 
+1. 主机可以读写，从机不能写只能读！主机中的所有信息和数据，都会自动被从机保存！
+2. 若主机断开，从机依然可以查询数据。但从机不能写。若主机重新启动，则从机依然可直接获取主机的信息
+3. 若从机断开，重新连接主机，若已配置为从机（配置文件中配置）,则可以获取当前主机的全部数据
 
-**ThreadLocal一个线程只能存放一个变量吗？想存多个怎么搞**
 
-- 每一个ThreadLocal只能保存一个对象，因为以ThreadLocal为key（key是唯一的，所以value也是唯一的）
-- 解决办法
-  - 一个线程内创建多个ThreadLocal，就可以保存多个对象
-  - 在一个ThreadLocal中，value为一个map，这样也可以保存多个对象
 
+### *哨兵模式*
 
+避免了因为master宕机导致redis集群全部不可用的情况。
 
 
 
-ThreadLocalMap 的一些特点
+哨兵Sentinel有以下功能：
 
-* key 的 hash 值统一分配（**对象加一个数字作为hash值**）
-* 初始容量 16，扩容因子 2/3，扩容时容量翻倍
-* key 索引冲突后用解决冲突。（**开放寻址法，是发生哈希碰撞，则寻找数组中下一个空闲位置，而不是构建链表**）
-* ThreadLocalMap 中的 key 被设计为弱引用
+- 集群监控：负责监控redis master和slave进程是否正常工作
+- 消息通知：如果某个redis实例有故障，那么哨兵负责发送消息作为报警通知给管理员
+- 故障转移：如果master node挂掉，会自动转移到slave node（选举一个新的master）
+- 配置中心：如果故障发生，通知client客户端新的master地址
 
+哨兵用于实现redis集群高可用的特点（上面是哨兵模式的功能，下面是redis实现哨兵模式）
 
+<img src="redis.assets/image-20220512100729161.png" alt="image-20220512100729161"/>
 
-明明每一个ThreadLocal只能保存一个对象，为什么会涉及到扩容的问题？
+- **服务状态监控**
+  - 应用心跳机制，每一秒向集群的每个master和slave发送一个ping指令
+  - **主观下线**：哨兵节点发现某个实例未在规定时间内响应
+  - **客观下线：**多个哨兵（最好超过哨兵一半个数）都认为该节点主观下线，则认为客观下线。
+- **选举新master**：发现master出现故障，则从slave中选择新的master
+  - 首先判断slave与master断开时间长短，若时间过长，则舍弃
+  - 再判断slave节点的slave-priority值，越小优先级越高
+  - 若优先级一致，则对比offset，越大表明，数据越新。
+  - 最后判断slave节点的id大小，越小优先级越高
+- **实现步骤**
+  - 选举成功后，哨兵向该节点发送slaveof no one命令，成为新master
+  - 哨兵向其他节点发送新节点的地址和端口
+  - 最后哨兵将故障节点标记为slave，故障恢复后成为slave节点
 
-- 因为一个线程内可以创建多个ThreadLocal
-- 每一个线程只有一个ThreadLocalMap ，但是可以有多个ThreadLocal
+### 分片集群
 
+**解决主从复制中，每个节点redis保存内存过少的问题，因为但节点设置过大，使得redis主从复制困难，并解决写操作较多的情况**
 
+- 有多个master，每个master保存不同数据，即分片集群内部有多个小集群，缓存不一样的数据
+- 每个master有多个slave
+- master之间通过ping检测彼此健康状态
+- 客户端请求任意节点，会最终路由到正确节点
+- ![image-20220512103112749](redis.assets/image-20220512103112749.png)
 
 
 
-为什么ThreadLocalMap 中的 key 被设计为弱引用？
+- ### 散列插槽
 
-**弱引用 key，仅仅是通过GC回收了key，value未回收**
+  - redis将16384个插槽分配给不同的master节点。
+  - set和get数据时，redis通过key计算插槽值，找到对应的master，并操作
+    - set {xxx}key value   将{}内的内容进行计算插槽值
+    - set key value 计算key的插槽值
 
-ThreadLocalMap 中的 key 被设计为弱引用，原因如下
+- ### 集群伸缩
 
-* Thread 可能需要长时间运行（如线程池中的线程），如果 key 不再使用，需要在内存不足（GC）时释放其占用的内存
+  - 在集群添加和删除master。注意要对插槽进行重新分配。要指定旧master的插槽迁移到新的master中
 
 
 
-**内存释放时机，即GC回收了key，如何释放value？**（**ThreadLocalMap 存在内存泄露问题**）
+## 假如Redis里面有1亿个key，其中有10w个key是以某个固定的已知的前缀开头的，如果将它们全部找出来？
 
-- 被动GC释放key
-  - 仅是让key的内存释放，关联value的内存并不会释放
-- 懒惰被动释放value
-  - get Key时，发现是null key，则释放其value内存
-  - set key时，使用启发式扫描，清除临近额null key的value内存，启发次数与元素个数，是否发现null key有关。**即存储或者是修改key时，会将临近的null key清理掉**
-- 主动remove释放key，value
-  - 会同时释放 key，value 的内存，也会清除临近的 null key 的 value 内存
-  - **推荐使用它，因为一般使用 ThreadLocal 时都把它作为静态变量（即强引用），因此无法被动依靠 GC 回收key，懒惰被动释放value的方法全部失效**
+使用keys指令可以扫出指定模式的key列表。
 
+(*表示多个任意字符，？表示任意一个字符)
 
+对方接着追问：如果这个redis正在给线上的业务提供服务，那使用keys指令会有什么问题？
+这个时候你要回答redis关键的一个特性：redis的单线程的。keys指令会导致线程阻塞一段时间，线上服务会停顿，直到指令执行完毕，服务才能恢复。这个时候可以使用scan指令，scan指令可以无阻塞的提取出指定模式的key列表，但是会有一定的重复概率，在客户端做一次去重就可以了，但是整体所花费的时间会比直接用keys指令长。
 
 
 
+## redis热点缓存优化
 
+https://blog.csdn.net/fuqianming/article/details/99682764
 
-## 9. CAS
+**如何发现热点缓存**
 
-在JVM中。
+- *方法一:凭借业务经验，进行预估哪些是热key*
+  其实这个方法还是挺有可行性的。比如某商品在做秒杀，那这个商品的key就可以判断出是热key。缺点很明显，并非所有业务都能预估出哪些key是热key。
+- *方法二:在客户端进行收集*
+  这个方式就是在操作redis之前，加入一行代码进行数据统计。那么这个数据统计的方式有很多种，也可以是给外部的通讯系统发送一个通知信息。缺点就是对客户端代码造成入侵。
+- *方法三:在Proxy层做收集*
+  有些集群架构是下面这样的，Proxy可以是Twemproxy，是统一的入口。可以在Proxy层做收集上报，但是缺点很明显，并非所有的redis集群架构都有proxy。
+  - ![img](redis.assets/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L2Z1cWlhbm1pbmc=,size_16,color_FFFFFF,t_70-16604542658648.png)
+- 方法四:用redis自带命令
+  (1)monitor命令，该命令可以实时抓取出redis服务器接收到的命令，然后写代码统计出热key是啥。当然，也有现成的分析工具可以给你使用，比如redis-faina。但是该命令在高并发的条件下，有内存增暴增的隐患，还会降低redis的性能。
+  (2)hotkeys参数，redis 4.0.3提供了redis-cli的热点key发现功能，执行redis-cli时加上–hotkeys选项即可。但是该参数在执行的时候，如果key比较多，执行起来比较慢。
+- *方法五:自己抓包评估*
+  Redis客户端使用TCP协议与服务端进行交互，通信协议采用的是RESP。自己写程序[监听](https://so.csdn.net/so/search?q=监听&spm=1001.2101.3001.7020)端口，按照RESP协议规则解析数据，进行分析。缺点就是开发成本高，维护困难，有丢包可能性。
 
-## 10. AQS
+**如何解决**
 
-### 1，简介
+- (1)利用二级缓存
 
-- **抽象的队列同步器**
+  比如利用ehcache，或者一个HashMap都可以。在你发现热key以后，把热key加载到系统的JVM中。
 
-是用来构建锁或者其它同步器组件的重量级基础框架及整个JUC体系的基石，通过内置的CLH（FIFO）队列的变种来完成资源获取线程的排队工作。并通过**int类型变量表示持有锁的状态。**
+  针对这种热key请求，会直接从jvm中取，而不会走到redis层。
 
+  假设此时有十万个针对同一个key的请求过来,如果没有本地缓存，这十万个请求就直接怼到同一台redis上了。
 
+  现在假设，你的应用层有50台机器，OK，你也有jvm缓存了。这十万个请求平均分散开来，每个机器有2000个请求，会从JVM中取到value值，然后返回数据。避免了十万个请求怼到同一台redis上的情形。
 
-AQS使用一个volatile的int 类型的成员变量status 来表示同步状态，通过内置的FIFO队列来完成资源获取的排队工作，将每条要去抢占资源的线程封装成一个**Node节点**来实现锁的分配，通过CAS的方法完成对status 值的修改
+- (2)备份热key【使用redis集群】
 
+  这个方案也很简单。不要让key走到同一台redis上不就行了。我们把这个key，在多个redis上都存一份不就好了。接下来，有热key请求进来的时候，我们就在有备份的redis上随机选取一台，进行访问取值，返回数据。
 
 
-CLH:Craig、Landin and Hagersten 队列,是一个单向链表,AQS中的队列是CLH变体的虚拟双向队列FIFO
 
-![image-20220318171044674](redis.assets/image-20220318171044674.png)
+## bitmap的使用
 
-- AQS为什么是JUC内容中最重要的基石
+Bitmaps 并不是实际的数据类型，而是定义在[String类](https://so.csdn.net/so/search?q=String类&spm=1001.2101.3001.7020)型上的一个面向字节操作的集合。因为字符串是二进制安全的块，他们的最大长度是512M，最适合设置成2^32个不同字节。bitmap可以直接对位进行操作。
 
-  这些锁都继承了AQS
+- `bitcount key [start] [end]` 获取指定范围为1的个数
 
-  (ReentrantLock | CountDownLatch | ReentrantReadWriteLock | Semaphore)
+- `getbit key offset` 获取指定位的值
+- `setbit key offset value`：给对应的位设置值
 
-![在这里插入图片描述](redis.assets/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L1RaODQ1MTk1NDg1,size_16,color_FFFFFF,t_70)
 
--  锁,面向锁的使用者。同步器,面向锁的实现者
--  **加锁会导致阻塞、有阻塞就需要排队,实现排队必然需要队列**
--  如果共享资源被占用,就需要一定的阻塞等待唤醒机制来保证锁分配。这个机制主要用的是**CLH队列**的变体实现的,将暂时获取不到锁的线程加入到队列中,**这个队列就是AQS的抽象表现。**它将请求共享资源的线程封装成队列的结点(**Node**) ,通过CAS、自旋以及LockSuport.park()的方式,维护state变量的状态,使并发达到同步的效果
 
-### AQS内部结构
+## redis阻塞的原因
 
-- AQS内部int变量: status 
-- CLH队列(三个大牛的名字组成),为一个双向队列，内部对象类型为Node<Thread>
+- 慢查询，
+  - 可能会造成阻塞，keys 可能会出现慢查询。
+- bigkey：
+  - 导致内存分布不均匀，超时阻塞，网络传输慢
+- **swap**：交换
+  - 如果内存是的使用率超过了电脑的实际内存，则会将一部分内存数据保存到磁盘上，那再查找数据时，会进行交换。速率就慢了
+  - 预防内存交换：
+    1. 保证机器充足的可用内存；
+    2. 确保所有 redis 示例设置最大可用内存（maxmemory），防止极端情况下 redis 内存不可控的增长；
+    3. 降低系统使用 swap 优先级，如 echo 10>/proc/sys/vm/swappiness。
+- 持久化操作
+  - rdb：save命令，fork子线程
+  - aof：开启 AOF，文件刷盘一般每秒一次，硬盘压力过大时，fsync 需要等待写入完成。
+- 网络延迟
+- Redis 输入缓冲区可能导致的阻塞
+  - 输入缓冲区：redis 为每个客户端分配了输入缓冲区，其会将客户端发送命令临时保存，然后取出来执行。 qbuf 表示总容量（0 表示没有分配查询缓冲区），qbuf-free 表示剩余容量（0 表示没有剩余空间）；大小不能超过 1G，当大小超过 1G 时会将客户端自动关闭，输入缓冲区不受 maxmemory 限制。
+- Redis 输出缓冲区可能导致的阻塞
+  - 输出缓冲区（client output buffer）：是 redis-server 端实现的一个读取缓冲区，redis-server 在接收到客户端的请求后，把获取结果写入到 client buffer 中，而不是直接发送给客户端。从而可以继续处理客户端的其他请求，这样异步处理方式使 redis-server 不会因为网络原因阻塞其他请求的处理。
 
-**Node内部结构为**
+# Redis原理
 
-- 成员变量：waitStatus 表明当前Node的等待状态
-- 前后Node指针
+## 数据结构
 
-**AQS同步队列的基本结构**
+### 1，简单动态字符串SDS
 
-![在这里插入图片描述](redis.assets/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L1RaODQ1MTk1NDg1,size_16,color_FFFFFF,t_70-20230315202424312-8883075.png)
+![image-20220512205932859](redis.assets/image-20220512205932859.png)
 
+Redis自定义了字符串结构：SDS（**简单动态字符串**）
 
+- **原因**：
+  - 在 C 语言中，字符串可以用一个 `\0` 结尾的 `char` 数组来表示。所以不能随意的在尾部追加字符串。
+  - 另外redis保存的数据要求是二进制安全的。因为数据可能是单纯的字节数组， 以及服务器协议，所以避免转义符等问题，所以选择SDS
 
-### AQS源码
+- **SDS结构：**为一个结构体，（与Java中的类相似）
+  - **char[] 数组，保存字符串**
 
-- 公平锁与非公平锁
-  - 创建锁时判断是否传入参数 true|false|不填。 不填或者false为非公平锁，true为公平锁
-  - 公平锁是指**未处于阻塞队列**中的线程来争抢锁，如果队列不为空，则老实到队尾等待
-  - 非公平锁是指**未处于阻塞队列**中的线程来争抢锁，与队列头唤醒的线程去竞争，谁抢到算谁的
-  - 二者区别： 公平锁与非公平锁的lock()方法唯一的区别就在于公平锁在获取同步状态时多了一个限制条件:**hasQueuedPredecessors()**
-    - hasQueuedPredecessors()：是公平锁加锁时判断等待队列中是否存在有效节点的方法
+  - **len：字符串长度 【避免了C语言的结束符】**
 
-**流程**
+  - **alloc:C语言需要自己申请字节数，为字符串留出裕量，则alloc>len**
 
-- **lock.lock( ) 源码**
-  - 加锁，进入锁内方法，通过CAS抢占线程。若抢占不到，则二次抢占或者说后续线程抢占
+  - flag：指定当前SDS最大容量，避免容量太大，占用空间，容量太小，不能盛放数据。（好像不重要，这个属性）
+    - 有多种大小的SDS
 
-![在这里插入图片描述](redis.assets/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L1RaODQ1MTk1NDg1,size_16,color_FFFFFF,t_70-8883019.png)
+  - ![image-20220512133245014](redis.assets/image-20220512133245014.png)
 
-- **acquire( ):源码和3大流程走向**
+- **动态扩容**
+  - 在原本内容上添加字符串，**会申请更多的内存空间**，避免多次申请内存，因为申请过程消耗性能
+    - 如果新字符串小于1M，则新空间为扩展后字符串长度的两倍+1；
+    - 如果新字符串大于1M，则新空间为扩展后字符串长度+1M+1。称为**内存预分配**
+- 优点：
 
-  - tryAcquire(arg)再次抢占线程，区分为公平锁和非公平锁方法。抢占不到，则添加到等待队列
+  - 获取字符串长度时间复杂度为O（1）
+  - 支持动态扩容，减少内存分配次数
+  - 二进制安全
 
-  ![在这里插入图片描述](redis.assets/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L1RaODQ1MTk1NDg1,size_16,color_FFFFFF,t_70-20230315202459090.png)
+### 2，IntSet
 
-- **非公平锁中，**再抢占一次，查看是否成功。成功则抢占。不成功，else if判断：当前线程是否是当前持有的线程（即锁重入），是的话，抢占。不成功则返回false。调用acquire中的addWaiter方法
+![image-20220512205915006](redis.assets/image-20220512205915006.png)
 
-![在这里插入图片描述](redis.assets/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L1RaODQ1MTk1NDg1,size_16,color_FFFFFF,t_70-20230315202546358.png)
+- 整数集合，**使用连续内存**
+  - 集合编码方式 不同的编码方式表示每个元素占空间大小不同。
+    - **节省空间，若2字节不能表示新添加的整数时，再对insert升级，以此节省内存空间**
+  - 数组实际指向元素地址，只保存地址值。encoding指定每个元素所占字节数
+  - ![image-20220512171109952](redis.assets/image-20220512171109952.png)
+- **特点**
+  - **Redis会确保Intset中的元素唯一、有序。**计算元素位置：startPar+（sizeof（encoding）*index）
+    - ![image-20220512171843225](redis.assets/image-20220512171843225.png)
+  - **intset升级**
+    - 向intset添加元素，若此元素超出encoding设置的范围，则进行intset升级。【新的编码方式是占用相同的空间表示更大容量的数值元素】
+    - 流程
+      - 升级到合适的编码encoding，并按新的编码方式更新旧的数据
+      - 倒序依次将数组中的元素拷贝到扩容后的正确位置（正序会覆盖原来的元素）
+      - 添加新的元素
+      - 更改encoding和length属性
+  - **由于intset有序，唯一，所以通过二分法插入和查找元素**
 
-- **addWaiter（Node.EXCLUSIVE）入队操作**
+### 3，Dict
 
-**传入要入队的Node**，若时队列为空，头结点和尾结点为null。进入enq(node)方法。若不为空，则加入到队列
+![image-20220512205900362](redis.assets/image-20220512205900362.png)
 
-- 初始化队列，**会创建一个哨兵，即空节点，不存储任何信息，只是占位**。真正第一个数据的结点在第二个开始。
-- 第二次循环，将Node插入到队列。首先新节点的prev指向旧的尾结点。旧尾结点的next指向新节点。tail更新为新节点。
+- redis的键值对通过Dict实现
+- Dict包括 哈希表（DictHashTable）、哈希节点（DictEntry）、字典（Dict）
+  - Dict![image-20220512174613279](redis.assets/image-20220512174613279.png)
+  - DictHashTable
+    - sizemask掩码计算插入位置，与Java的hashmap相同，与运算节省计算量。出现hash冲突，则生成链表
+      - ![image-20220512174907201](redis.assets/image-20220512174907201.png)
+    - table为DictEntry结合
+    - ![image-20220512174519534](redis.assets/image-20220512174519534.png)
+  - DictEntry![image-20220512174540818](redis.assets/image-20220512174540818.png)
+- **Dict扩容/收缩**size必须是2^n
+  - **扩容**
+    - 在hash表元素过多时，需要进行扩容
+    - 触发扩容条件（负载因子（LoadFactor = used/size）【`哈希表以保存节点数量 / 哈希表的大小` 因为节点可以是链表，所以负载因子可以>=1】）
+      - hash表的LocalFactor>=1,并且服务器没有执行bgsave或者AOF持久化操作
+      - hash表的LocalFactor>5
+  - **收缩**
+    - 若LocalFactor<0.1时，收缩
+  - **渐进式rehash**：扩容/收缩会创建新的hash表，导致hash表的size和sizemask变化，将旧hash表的数据重新计算位置到新hash表。渐进式为了避免因为hash表过大,一次性执行扩容/收缩操作过慢，阻塞主线程。**所以每一次访问dict都会进行rehash。**
+    - **步骤**
+      - 计算新的hash表的size
+      - 创建新的大小为size的hash表，赋值给Dict的dict.ht[1]
+      - **rehash操作不是一次性完成**，每次增删查改，都会将dict.ht[0]旧hash表中的一个链表迁移到新hash表。直到全部迁移，
+      - 交换dict.ht[0]和dict.ht[1]，并释放dict.ht[1]，rehash结束
+      - 新增操作直接写入ht[1],查，改，删会在rehash操作时两个表都查找执行
 
-![在这里插入图片描述](redis.assets/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L1RaODQ1MTk1NDg1,size_16,color_FFFFFF,t_70-20230315202552937.png)
+### 4，ZipList
 
-![在这里插入图片描述](redis.assets/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L1RaODQ1MTk1NDg1,size_16,color_FFFFFF,t_70-20230315202559193.png)
+![image-20220512213650296](redis.assets/image-20220512213650296.png)
 
-- **acquireQueued(addWaiter(Node.EXCLUSIVE), arg)**
-  - 在进入队列后会进入该方法。进入一个死循环，首先获取头节点，再次尝试获取锁。
-  - 没获取到则进入shouldParkAfterFailedAcquire方法。
-    - 第一次进入该方法，则将Node的waitstatus设置赋值为Node.SIGNAL 为-1。
-  - 退出再次回到acquireQueued重新循环，再次抢占锁。再次进入shouldParkAfterFailedAcquire方法。
-    - 由于头结点的值为Node.SIGNAL，则返回true。
-  - 执行parkAndCheckInterrupt方法
-    - park方法，将线程挂起。
+压缩列表：特殊双端链表，底层并不是双向链表，但可以实现双向链表功能。**使用连续内存**
 
-![在这里插入图片描述](redis.assets/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L1RaODQ1MTk1NDg1,size_16,color_FFFFFF,t_70-20230315202608901.png)
+![image-20220512203736912](redis.assets/image-20220512203736912.png)
 
-shouldParkAfterFailedAcquire
+- zlbytes：记录整个压缩列表占用的字节数
+- zltail：记录尾结点距离拉锁列表起始位置的偏移量。可以计算确定尾结点的地址（快速查找）
+- zllen：包含的结束数
+- zlend：结束字符，标记压缩列表末端
+- entry：节点，长度不固定，随内容变化，节省内存
+  - ![image-20220512204132893](redis.assets/image-20220512204132893.png)
+  - previous_entry_length：前一节点的长度，占1个或5个字节（以此实现倒序遍历）
+    - 前一节点的长度小于254字节，占1个字节，大于则占5个字节
+  - encoding：编码属性，记录content的数据类型，以及长度    占用1 byte。
+    - 00、01或者10开头代表字符串，分别占有1,2,5比特。后面为content长度
+    - 11开头，content为整数，只占用1字节，表示整数占用字节数
+      - ![image-20220512210833503](redis.assets/image-20220512210833503.png)
+  - contents：节点数据
 
-![在这里插入图片描述](redis.assets/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L1RaODQ1MTk1NDg1,size_16,color_FFFFFF,t_70-20230315202613457.png)
+压缩列表操作到指定位置的数据，每个节点，可知上一个节点的长度，进而得知previous_entry_length，在根据encoding的前两位知道encoding的长度和content的长度，得到了整个entry的长度，可以到下一个entry
 
-parkAndCheckInterrupt
+- **连续更新问题**
+  - 如下链表时，在首节点插入一个超过254字节的entry，则后续的第一个entry的previous_entry_length就要增加4，，但该entry的结点长度原来是是250字节，增加后，后续节点也要加4.
+  - ![image-20220512213745723](redis.assets/image-20220512213745723.png)
+  - ZipList这种特殊情况下产生的连续多次空间扩展操作称之为**连锁更新（**Cascade Update）。新增、删除都可能导致连锁更新的发生。
 
-![在这里插入图片描述](redis.assets/20201028213629725.png)
+### 5，QuickList
 
-**入队和阻塞完成，等待执行线程结束**
+![image-20220512220010542](redis.assets/image-20220512220010542.png)
 
-- **执行线程结束会执行unlock（）方法**，unlock方法会调用tryRelease()
-  - tryRelease（）方法会调用tryRelease()方法，将AQS的status设置为0，将Owner持有锁线程改为null，并返回true
-  - 返回true，调用unparkSuccessor( ) ：将哨兵的状态改为0。并激活线程  Unpark
-- 上面的acquireQueued.parkAndCheckInterrupt（）方法重新执行，并将重新获取线程。
-  - 方法中，将阻塞队列的头节点（哨兵）设置为当前获取到线程的node，并取消原哨兵的引用，使其等待GC回收。并将新哨兵节点的线程清除
+- 为双向链表，每个节点为ZipList（ZipList需要连续内存，双向链表使得可以使用多个ZipList，从而一定程度缓解使用连续内存的问题）。
+- ZipList可以设置list上限，可以设置大小或者节点个数
+- 可以对ZipList进行压缩。进一步节省内存
+- ![image-20220512215853882](redis.assets/image-20220512215853882.png)
 
-![在这里插入图片描述](redis.assets/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L1RaODQ1MTk1NDg1,size_16,color_FFFFFF,t_70-20230315202632311.png)
+### 6，SkipList
 
+![image-20220513102855426](redis.assets/image-20220513102855426.png)
 
+**跳表**
 
-## CompletableFuture 使用默认线程池
+- 双向链表，**有序**
+- **多级指针：**每个节点不仅可以指向下一个节点，还可以指向不同跨度的节点（在查找元素时更快）
+- ![image-20220513103016857](redis.assets/image-20220513103016857.png)
 
-CompletableFuture使用默认线程池时，会根据机器的CPU核数相关。当CPU核心数-1>1 即至少4核机器，才会使用默认线程池（核心线程数=CPU核心数-1），否则为每一个CompletableFuture任务创建一个新线程去执行，没有使用线程，降低多线程执行的性能，并且存在资源耗尽的风险。
+**跳表与红黑树的区别**
 
-即使使用四核及以上的机器，对CPU密集型的任务来说勉强可以，但是IO密集型的任务，则远远不够，会导致大量的IO任务积压。
+- 跳表特点
 
-因此，CompletableFuture 建议自定义线程
+  - 增删改查性能与红黑树类似，但实现简单
+  - 批量查询方便，可以很方便的找到区间中的批量数据，更方便做批量操作
+
+
+
+
+
+
+### RedisObject
+
+redis中的数据，键和值都会封装为一个RedisObject。
+
+![image-20220513104130815](redis.assets/image-20220513104130815.png)
+
+redis会根据不同的数据类型，选择不同的编码方式，即一个对象类型有多种编码方式。HT为hashtable
+
+![image-20220513104258838](redis.assets/image-20220513104258838.png)
+
+包含11种不同类型：11种不同类型：
+
+![image-20220513104541000](redis.assets/image-20220513104541000.png)
+
+### BigKey
+
+- 定义
+
+  - **字符串类型**：它的big体现在单个value值很大，一般认为超过10KB就是bigkey。
+
+  - **非字符串类型**：哈希、列表、集合、有序集合，它们的big体现在元素个数太多，一般来说超过5000个。
+
+- 危害
+  1. 内存空间不均匀（单个内容过大，当然不均匀）
+  2. 超时阻塞：由于Redis单线程的特性，操作bigkey的通常比较耗时，也就意味着阻塞Redis可能性越大
+  3. 网络拥塞：bigkey也就意味着每次获取要产生的网络流量较大。流量大就容易产生网络阻塞
+- 查询 bigkey：   redis-cli --bigkeys
+- 优化
+  1. 拆分：将一个元素拆分为多个：将一个list集合中的数据改为：一个list包含多个list。每个list再保存数据
+  2. 合理使用数据类型：不要直接保存 key = user:1 ，value=user信息。可以改为  key = user:name:1 ,value = 名字  
+
+
+
+
+
+
+
+### 五种基本数据类型
+
+首先都是redisObject对象，更底层使用不同的编码方式
+
+#### String
+
+- 基本编码方式：RAW，基于简单动态字符串（SDS）实现，上限是512MB。
+- 若存储的SDS长度小于44字节，则采用EMBSTR编码（读法：M String）编码，
+  - **注意**，此编码格式下，RedisObject与SDS在内存中为连续空间，不是指针指向的关系。（申请内存时只需要调用一次内存分配函数，效率高）
+  - 此编码下，该对象最多占用64字节
+  - 此时底层仍使用SDS保存对象
+- 若存储为整数值，采用INT编码，RedisObject中的pre直接保存数值，不用使用SDS了 
+
+#### List
+
+- 底层使用QuickList，可以双端访问，且内存占用较低，包含多个ZipList，存储上限高
+
+![image-20220513112645518](redis.assets/image-20220513112645518.png)
+
+#### Set
+
+无序，元素唯一，可以求交集并集，差集
+
+- 底层采用HT编码，即Redis中的Dict。Dict 可以保存键值对,value统一为null
+- 若存储的所有数据都是整数时，且元素数量不超过set-max-intset-entries阈值，采用intset节省内存
+
+#### Zset
+
+set存储，且按分数排序，元素唯一，可以通过元素获取分数
+
+- 底层使用SkipList和HT（Dict）结合的方式，
+
+  - SkipList：可以排序，按分数排序，可以同时存储元素和分数。（保证有序性）
+
+  - HT（Dict）：键值存储，key=元素，value=分数   （保证键值对，通过元素获取分数）
+
+- 在数量较小时，采用ZipList结构节省内存。
+
+- （同时维护两个结构，消耗内存，数量很小时，无序和有效没有太大差别）
+
+  - 同时满足如下两个条件
+    - 元素数量小于阈值（默认128）
+    - 元素大小小于64字节
+  - ZipList没有排序功能，也不是键值对存储，采用了新的编码方式
+    - ZipList为连续内存，因此score和element是紧挨在一起的两个entry， element在前，score在后
+    - score越小越接近队首，score越大越接近队尾，按照score值升序排列
+
+#### Hash
+
+键值存储，唯一
+
+- 底层使用HT（Dict），与Zset类似
+- Hash结构默认采用ZipList编码，相邻的两个entry分别保存key和value（若数据较少时底层使用ziplist）
+- 数据量较大时，会转为HT编码（Dict），触发条件（满足一个则转变）
+  - ZipList的元素数量超过了阈值，默认512
+  - ZipList的entry大小超过阈值64字节
+
+## 网络模型
+
+### 1，用户空间和内核空间
+
+为了避免用户应用与操作系统在计算机上冲突，分为内核空间和用户空间（用户态和内核态）
+
+- 用户态只能调用自己的资源，系统资源需要向系统申请，由内核态代为执行
+- 内核态可以调用系统一切资源
+
+
+
+- ## Linux下的IO过程
+
+  - 在用户空间和内核空间都有缓冲区
+  - 写数据时，要把用户缓冲数据拷贝到内核缓冲区，然后写入设备
+  - l读数据时，要从设备读取数据到内核缓冲区，然后拷贝到用户缓冲区
+  - 五种IO模型 
+    - 看操作系统的IO模型
+
+### 2，Redis网路模型
+
+- 看redis 单线程
+
+### RESP协议
+
+是RESP2协议，客户端发送遵从此协议的信息，与Redis的Service通信
+
+- u单行字符串：首字节是 ‘**+**’ ，后面跟上单行字符串，以CRLF（ "**\r\n**" ）结尾。例如返回"OK"： "+OK\r\n"
+
+- 错误（Errors）：首字节是 ‘**-**’ ，与单行字符串格式一样，只是字符串是异常信息，例如："-Error message\r\n"
+
+- 数值：首字节是 ‘**:**’ ，后面跟上数字格式的字符串，以CRLF结尾。例如：":10\r\n"
+
+- 多行字符串：首字节是 ‘**$**’ ，表示二进制安全的字符串，最大支持512MB：
+
+- 如果大小为0，则代表空字符串："$0\r\n\r\n"
+
+- 如果大小为-1，则代表不存在："$-1\r\n"
+
+- 数组：首字节是 ‘*****’，后面跟上数组元素个数，再跟上元素，元素数据类型不限:（一般都使用数组）
+
+- set name ”虎哥”
+
+  - ```
+    *3\r\n
+    $3\r\nset\r\n
+    $4\r\nname\r\n
+    $6\r\n虎哥\r\n
+    ```
+
+
+
+## 内存策略
+
+若占用内存过多，影响性能，若是达到上限，则无法存储其他数据。所以采用了一些策略实现内存回收
+
+#### 内存过期策略
+
+- Redis是如何知道一个key是否过期呢？
+  - 数据库中保存有两个Dict，即两个字典，一个是key-value，一个是key-ttl保存过期时间。所以在获取数据时，从一个Dict中获取值，从一个Dict中获取过期时间，验证是否过期
+
+- 是不是TTL到期就立即删除了呢？
+  - 不是，因为实时检测每个key的过期时间过于消耗性能，Redis 采用的是 **周期删除+惰性删除** 。
+  - **惰性删除：**获取数据时，检测是否过去，若过期，则删除该key。
+    - 为避免保存在redis的key，已过期没有访问，又引入了周期删除
+  - **周期删除**：周期性的抽样部分key，判断是否过期，进行删除
+    - 服务器初始化时，按照server.hz的频率执行过期key的处理，使用SLOW模式
+    - 每个事件循环前，执行过期key清理，使用FAST模式
+  - SLOW模式（速度较慢，但效率高）
+    - 执行频率受server.hz影响，默认为10，每个周期100ms。
+    - 执行一次删除操作不超过周期的25%
+    - 每个遍历db，遍历db中的bucket，抽取20个key判断是否过期。
+    - 如果没达到时间上限（25ms）并且过期key比例大于10%，再进行一次抽样，否则结束
+  - FAST模式（速度快）
+    - 执行频率受事件调用影响，两次之间间隔不低于2ms
+    - 执行清理耗时不超过1ms
+    - 每个遍历db，遍历db中的bucket，抽取20个key判断是否过期。
+    - 如果没达到时间上限（1ms）并且过期key比例大于10%，再进行一次抽样，否则结束
+
+
+
+## 其他场景对过期key的处理
+
+
+1、快照生成RDB文件时
+
+  过期的key不会被保存在RDB文件中。
+
+2、服务重启载入RDB文件时
+
+  Master载入RDB时，文件中的未过期的键会被正常载入，过期键则会被忽略。Slave 载入RDB 时，文件中的所有键都会被载入，当主从同步时，再和Master保持一致。
+
+3、AOF 文件写入时
+
+  因为AOF保存的是执行过的Redis命令，当过期key被删除时，DEL 命令也会被同步到 AOF 文件中去。
+
+4、重写AOF文件时
+
+  执行 BGREWRITEAOF 时 ，过期的key不会被记录到 AOF 文件中。
+
+5、主从同步时
+
+  Master 删除 过期 Key 之后，会向所有 Slave 服务器发送一个 DEL命令，Slave 收到通知之后，会删除这些 Key。
+
+  Slave 在读取过期键时，不会做判断删除操作，而是继续返回该键对应的值，只有当Master 发送 DEL 通知，Slave才会删除过期键，这是统一、中心化的键删除策略，保证主从服务器的数据一致性。
+
+
+
+
+
+#### 内存淘汰策略
+
+在redis内存使用超出阈值，会主动删除部分key，释放内存。**需要设置redis内存上限才会执行内存淘汰**
+
+- noeviction： 不淘汰任何key，但是内存满时不允许写入新数据，默认就是这种策略。
+- volatile-ttl： 对设置了TTL的key，比较key的剩余TTL值，TTL越小越先被淘汰
+- allkeys-random：对全体key ，随机进行淘汰。也就是直接从db->dict中随机挑选
+- volatile-random：对设置了TTL的key ，随机进行淘汰。也就是从db->expires中随机挑选。
+- allkeys-lru： 对全体key，基于LRU算法进行淘汰
+- volatile-lru： 对设置了TTL的key，基于LRU算法进行淘汰
+- allkeys-lfu： 对全体key，基于LFU算法进行淘汰
+- volatile-lfu： 对设置了TTL的key，基于LFI算法进行淘汰
+
+LRU（Least Recently Used），最少最近使用。用当前时间减去最后一次访问时间，这个值越大则淘汰优先级越高。
+
+LFU（Least Frequently Used），最少频率使用。会统计每个key的访问频率，值越小淘汰优先级越高。
+
+![image-20220513202627236](redis.assets/image-20220513202627236.png)
+
