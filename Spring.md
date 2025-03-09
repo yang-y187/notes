@@ -5869,7 +5869,7 @@ DefaultHandlerExceptionResolver：  默认处理异常方法的解析器
 
 
 
-## 12，SpringMVC-运行流程
+## ==12，SpringMVC-运行流程==
 
 1. **所有请求，前端控制器（DispatcherServlet）收到请求，调用doDispatch进行处理。**
 2. **根据HandlerMapping中保存的请求映射信息找到，处理当前请求的处理器执行链（包含拦截器）**
@@ -6776,7 +6776,7 @@ sql：抽取可用的sql语句
 
 ## 4，缓存
 
-### 1，Mybatis缓存机制
+### ==1，Mybatis缓存机制==
 
 本质为一个Map，能保存查询出的一些数据，方便下次查询
 
@@ -6804,7 +6804,7 @@ SqlSession级别的缓存；默认缓存是一直存在的
 
 - 全局作用域缓存
 - 默认不开启二级缓存，需要手动配置
-- MyBatis听哦了二极缓存接口以及实现，缓存实现要求POJO实现Serializable接口
+- MyBatis二极缓存实现要求POJO实现Serializable接口
 - **二级缓存在Sqlsession关闭或者提交后才能生效**
 
 **步骤**
@@ -6881,7 +6881,10 @@ MyBatits的Cache并不专业，可以导入包，实现强大功能
 
    
 
-## Mybatis的运行原理
+## ==Mybatis的运行原理==
+
+- 通过sql的xml创建sqlSessionFactory，会话工厂，全局只有一个
+- 每次执行，都会创建sqlSession
 
 ![image-20220319205148814](Spring.assets/image-20220319205148814.png)
 
@@ -6893,17 +6896,27 @@ MyBatits的Cache并不专业，可以导入包，实现强大功能
 
 
 
+## ==延迟加载==
+
+MyBatis支持延迟加载，但默认关闭。 配置 lazyLoadingEnabled=true|false
+
+假设一个连接查询，是查询用户信息时，会把用户的订单页查询出来。
+
+查询用户时，若没有用到订单信息，则不执行订单的查询操作，在调用订单信息时，才执行订单的查询操作
 
 
 
+![image-20250308220019392](Spring.assets/image-20250308220019392.png)
 
+- ### 原理
 
+  - 使用cglib创建目标对象的代理对象
+  - 对get方法，进行方法增强，进入拦截器invoke方法，发现get的属性为null，则执行sql查询数据
+  - 查询完成后，调用set操作进行赋值，然后返回get方法的调用
 
+  
 
-
-
-
-
+![image-20250308220452737](Spring.assets/image-20250308220452737.png)
 
 
 

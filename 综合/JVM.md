@@ -253,3 +253,24 @@ java -XX:+PrintCommandLineFlags -version  查看指令
 
 jmap -dump:live,format=b,file=dump.hprof PID
 
+
+
+## 内存泄漏问题如何排查
+
+1. 获取堆内存快照dump
+2. Visual去分析dump文件
+3. 通过查看堆信息的情况，定位内存溢出问题
+
+
+
+
+
+1、通过jmap指定打印他的内存快照dump(Dump文件是进程的内存镜像。可以把程序的执行状态通过调试器保存到dump文件中)
+
+2、通过工具， VisualVM去分析dump文件，VisualVM可以加载离线的dump文件
+
+![image-20250309144935731](JVM.assets/image-20250309144935731.png)
+
+3、通过查看堆信息的情况，可以大概定位内存溢出是哪行代码出了问题
+
+![image-20250309144953531](JVM.assets/image-20250309144953531.png)

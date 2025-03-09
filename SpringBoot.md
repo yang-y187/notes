@@ -1956,7 +1956,7 @@ public @interface EnableAutoConfiguration {
 
 ==**xxxxxAutoConfiguration ---> 组件  --->** **xxxxProperties里面拿值  ----> application.properties**==
 
-#### **==自动装配==**
+## **==自动装配==**
 
 SpringBoot 在启动时会扫描外部引用 jar 包中的`META-INF/spring.factories`文件，将文件中配置的类型信息加载到 Spring 容器
 
