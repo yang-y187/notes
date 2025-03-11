@@ -874,7 +874,19 @@ B+树中，叶子节点 是通过双向链表连接。数据页中的数据则�
 
 
 
+## 邮箱、身份证号如何建索引
 
+- 邮箱可以使用前缀索引，即建立索引时执行索引长度
+- 身份证号前6位是区号，中间8位是出生日期，后面4位是随机数。可以存储时，对身份证号反转存储，再指定前缀索引
 
+**若指定前缀索引，则无法使用索引覆盖**
 
+建立前缀索引，不能盲目的取前N个字段，需统计计算下区分度
+
+```sql
+SELECT COUNT(DISTINCT LEFT(email, 5)) / COUNT(*) AS prefix_5,
+       COUNT(DISTINCT LEFT(email, 10)) / COUNT(*) AS prefix_10,
+       COUNT(DISTINCT LEFT(email, 15)) / COUNT(*) AS prefix_15
+FROM users;
+```
 
