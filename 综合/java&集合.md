@@ -444,7 +444,7 @@ java语言实现反射的方法除了**本地实现**之外，还会采用**动�
 
 
 
-反射调用的Inflation机制可以通过参数（-Dsun.reflect.noInflation=true）来关闭（对应代码是newMethodAccessor 方法中的if 判断）。这样在反射调用开始的时候就会直接使用动态实现，而不会使用委派实现或者本地实现。
+反射调用的Inflation机制可以通过参数（**-Dsun.reflect.noInflation=true**）来关闭（对应代码是newMethodAccessor 方法中的if 判断）。这样在反射调用开始的时候就会直接使用动态实现，而不会使用委派实现或者本地实现。
 
 
 
