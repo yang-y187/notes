@@ -890,3 +890,25 @@ SELECT COUNT(DISTINCT LEFT(email, 5)) / COUNT(*) AS prefix_5,
 FROM users;
 ```
 
+
+
+## select中 Count(*)，Count(1)，Count(字段)的区别
+
+- Count(*)
+  - 统计所有行的数量，无论行中字段数据是否为null，也不会访问具体的列信息
+  - **Count(*),在执行时，会优化为Count(0)，所有执行的效率方面是与Count(1)是相同的**
+- Count(1):
+  - 统计所有行的数量，无论行中字段数据是否为null，不会访问具体的列信息
+- Count(字段)：
+  - 统计当前字段不为null的行数，需要访问具体的列信息
+
+
+
+
+
+
+
+
+
+
+
