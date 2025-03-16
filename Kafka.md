@@ -391,10 +391,10 @@ Topic是一个逻辑概念，partition 分区 是物理概念。
 
 ==如何在log文件中定位到offset=600的Record？==
 
-- 根据offset查找到对应的segment文件
+- 根据offset通过二分法查找到对应的segment文件
 - 通过segment查找到对应的index文件，因为index文件名以第一个消息的offset命名
-- 查找该index文件，定位log文件对应的位置
-- 在log文件向下遍历查找目标记录
+- 查找该index文件，通过二分法定位log文件中稀疏索引对应的位置
+- 在log文件稀疏索引位置向下遍历查找目标记录
 
 
 
