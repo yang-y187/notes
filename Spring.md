@@ -1943,7 +1943,7 @@ public ClassPathXmlApplicationContext(String configLocation) throws BeansExcepti
 
 ApplicationContext最终实现BeanFactory：ConfigurableListableBeanFactory可以创建bean对象。IOC功能与bean工厂类似。为创建Bean对象
 
-![图片1](../Spring.assets/%E5%9B%BE%E7%89%871.png)
+![图片1](Spring.assets/%E5%9B%BE%E7%89%871.png)
 
 BeanFactory和ApplicationContext的区别；
 
