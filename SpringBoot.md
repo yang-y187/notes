@@ -1,6 +1,6 @@
 ---
 
-typora-copy-images-to: springBootImg
+
 typora-root-url: springBootImg
 ---
 
@@ -2508,9 +2508,9 @@ Map<String,Object> map,  Model model, HttpServletRequest request   **都是可�
 private final ModelMap defaultModel = new BindingAwareModelMap();
 ```
 
-![image-20220111150023038](springBootImg\image-20220111150023038.png)
+![image-20220111150023038](/../SpringBoot.assets/image-20220111150023038.png)
 
-![image-20220111151138287](springBootImg\image-20220111151138287.png)
+![image-20220111151138287](/../SpringBoot.assets/image-20220111151138287.png)
 
 
 
@@ -2558,7 +2558,7 @@ mappedHandler = this.getHandler(processedRequest);
 HandlerAdapter ha = this.getHandlerAdapter(mappedHandler.getHandler());
 ```
 
-![image-20220111090834908](springBootImg\Image5.png)
+![image-20220111090834908](Image5.png)
 
 **HandlerAdapter**：
 
@@ -2590,13 +2590,13 @@ invokeHandlerMethod()中：
 
 ​	Controller中方法能写多少种参数类型。取决于参数解析器。
 
-![image-20220111092446889](D:\我的坚果云\springBootImg\image-20220111092446889.png)
+![image-20220111092446889](image-20220111092446889.png)
 
 ##### 3.4返回值处理器
 
  **this.returnValueHandlers():返回值处理器**，即方法可以返回的返回值类型，Model ，view，或ModelAndView共15种
 
-![image-20220111092905515]( springBootImg\image-20220111092905515.png)
+![image-20220111092905515]( image-20220111092905515.png)
 
 ##### 3.5.1 执行目标方法，获取目法的参数值
 
@@ -2819,7 +2819,7 @@ GenericConversionService：在设置每一个值的时候找到它里面的所�
 
 **byte -- > file**
 
-![image.png](D:\我的坚果云\springBootImg\ergewrgewrgwedws)
+![image.png](ergewrgewrgwedws)
 
 
 
@@ -2833,7 +2833,7 @@ GenericConversionService：在设置每一个值的时候找到它里面的所�
 
 **目标方法执行完后，返回ModelAndView对象，包含view 前往的地址，以及Model数据**
 
-![image-20220111154110734](D:\我的坚果云\springBootImg\image-20220111154110734.png)
+![image-20220111154110734](image-20220111154110734.png)
 
 ##### 3.7处理派发结果
 
@@ -2888,13 +2888,13 @@ GenericConversionService：在设置每一个值的时候找到它里面的所�
 
 #### 4，数据响应与数据协商
 
-![image-20220111212952548](D:\我的坚果云\springBootImg\image-20220111212952548.png)
+![image-20220111212952548](image-20220111212952548.png)
 
 ##### 4.1返回值设定
 
 ###### 4.1.1返回值解析器：
 
-![image-20220111213114551](D:\我的坚果云\springBootImg\image-20220111213114551.png)
+![image-20220111213114551](image-20220111213114551.png)
 
 
 
@@ -2939,7 +2939,7 @@ invokeAndHandle方法中，在执行完invoke并返回值后，对返回值进�
 
 - 调用selectHandler方法选择返回值处理器。处理器内部方法如下
 
-![image-20220111214625831](D:\我的坚果云\springBootImg\image-20220111214625831.png)
+![image-20220111214625831](image-20220111214625831.png)
 
 ==SpringMVC支持的返回值类型==
 
