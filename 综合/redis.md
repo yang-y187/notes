@@ -584,6 +584,8 @@ https://blog.csdn.net/fuqianming/article/details/99682764
 
 
 
+
+
 ## bitmap的使用
 
 Bitmaps 并不是实际的数据类型，而是定义在[String类](https://so.csdn.net/so/search?q=String类&spm=1001.2101.3001.7020)型上的一个面向字节操作的集合。因为字符串是二进制安全的块，他们的最大长度是512M，最适合设置成2^32个不同字节。bitmap可以直接对位进行操作。
