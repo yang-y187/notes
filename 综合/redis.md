@@ -528,7 +528,7 @@ https://blog.csdn.net/qq_23564667/article/details/110917900
 
 - ### 散列插槽
 
-  - redis将16384个插槽分配给不同的master节点。
+  - redis将16384（2的14次方）个插槽分配给不同的master节点。
   - set和get数据时，redis通过key计算插槽值，找到对应的master，并操作
     - set {xxx}key value   将{}内的内容进行计算插槽值
     - set key value 计算key的插槽值
