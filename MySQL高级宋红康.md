@@ -1245,6 +1245,25 @@ redo log日志写入分为两个阶段，
 
 
 
+- ### ==**主从复制是推还是拉？**==
+
+- binlog 的同步可以是 slave 向 master 拉取（pull），也可以是 master 向 slave 推送（push），应该选择哪种方式？
+
+- “推”是指 MySQL 主库在有数据更新时推送变更给从库，这种方式只有在数据有变更的时候才会发生，资源消耗少，同步及时。
+
+
+- “拉”是指 MySQL 从库定期询问主库是否有数据更新，这种方式频繁询问，资源消耗多，效率低且同步延迟大。
+
+
+**那么 MySQL 具体是怎么同步 binlog 的呢？**
+
+- slave 与 master 建立连接之后，会把当前哪个 binlog 文件（MASTER_LOG_FILE）和具体偏移位置（MASTER_LOG_POS) 告诉 master。对应的，主库会启动一个 log dump 线程，根据传过来的（file，pos）在本地的binlog中查找，并把剩下的 binlog 发送给slave。这个过程是 pull 模式。
+
+
+- 当主从数据一致之后，master 收到的修改类操作，都会实时传播（propagate）给 slave，此时属于 push 模式。
+
+
+- 所以 MySQL 主从复制是**推拉结合**。
 
 
 
@@ -1254,5 +1273,4 @@ redo log日志写入分为两个阶段，
 - varchar(n) n指定的不是字节长度，而是容纳长度，如：一个utf-8的汉字需要3个字节存储，那么varchar（n）可以最大存储n个汉字，即3*n个字节。utf-8的字母则是一个字节，存储的内容MySQL会进行分析，找出最少的存储方式。
 
 - 数据库更新时，假设 set a = 3 where id = xx，如果数据库当前行的数据已经是3
-
 
