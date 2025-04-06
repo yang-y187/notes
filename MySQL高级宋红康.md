@@ -656,6 +656,12 @@ Using filesortUsing join buffer：join 连接条件key未使用索引，很慢
 
 impossible where：where 条件逻辑错误。
 
+using index：命中了索引覆盖
+
+using index conditon：命中了索引下推
+
+using index merge: 命中了索引合并
+
 ## 5，索引失效的情况
 
 - 不满足**最佳左前缀原则**，没有按照联合索引的顺序查询，或者说缺少左侧列的条件查询
