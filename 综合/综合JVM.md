@@ -39,7 +39,7 @@ Runtime.getRuntime().addShutdownHook(shutdownHook);
 
 ## 一个对象的创建过程
 
-## jvm怎么调优？
+
 
 ## OOM的排查
 
@@ -47,12 +47,16 @@ Runtime.getRuntime().addShutdownHook(shutdownHook);
   - 异常
     - **`java.lang.OutOfMemoryError: GC Overhead Limit Exceeded`** ： 当 JVM 花太多时间执行垃圾回收并且只能回收很少的堆空间时，就会发生此错误。	
     - **`java.lang.OutOfMemoryError: Java heap space`** :假如在创建新的对象时, 堆内存中的空间不足以存放新创建的对象, 就会引发此错误。(和配置的最大堆内存有关，且受制于物理内存大小。最大堆内存可通过`-Xmx`参数配置，若没有特别配置，将会使用默认值，
+      - 一般异常情况是java堆OOM，可能情况
+        -  内存泄漏
+        - 缓存使用不当
+        - 数据量超出预期
+        - 堆内存设置大小不当
   - 解决办法：
     - 内存泄露或者堆的大小设置不当引起。对于内存泄露，需要通过内存监控软件查找程序中的泄露代码，而堆大小可以通过虚拟机参数-Xms,-Xmx等修改。
-
 - 方法区OOM
   - 异常：
-    - 当元空间溢出时会得到如下错误： `java.lang.OutOfMemoryError: MetaSpace`
+    - 当元空间溢出时会得到如下错误： `java.lang.OutOfMemoryError: MetaSpace` 原因：动态生成大量类(如CGlib代理)
   - 解决办法
     - JDK1.7  `-XX:PermSize`设置永久代初始大小。`-XX:MaxPermSize`设置永久代最大可分配空间
     - `JDK8`及以后：可以使用`-XX:MetaspaceSize`和`-XX:MaxMetaspaceSize`设置元空间初始大小以及最大可分配大小。
@@ -68,6 +72,54 @@ Runtime.getRuntime().addShutdownHook(shutdownHook);
     - 如果不存在泄漏，那么就是内存中的对象确实必须存活着，那么此时就需要通过虚拟机的堆参数（ -Xmx和-Xms）来适当调大参数；从代码上检查是否存在某些对象存活时间过长、持有时间过长的情况，尝试减少运行时内存的消耗。
 
 **其实与程序内存占用内存过高相仿** 
+
+
+
+- ### java堆OOM 排查流程
+
+  - 导出堆内存文件 
+    - 手动导出：jmap -dump 导出堆内存文件
+    - 自动写入: jvm参数，新增 -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/path/to/dump.hprof
+  - 使用MAT分析heap dump文件：
+    1. 打开MAT并加载dump文件
+    2. 查看"Leak Suspects"报告
+    3. 分析大对象保留链
+    4. 重点关注：
+       - 占用内存最大的对象
+       - 对象增长趋势
+       - GC Roots引用链
+
+
+
+## 运行时，如果程序内存过高，怎么排查
+
+例如频繁创建对象,内存泄露等这里会有俩种情况,一种报oom,一种导致系统卡,访问等待.
+
+1. Top指令查看
+
+2. 分析JVM内存分配，老年性，新生代的内存使用率，GC情况
+
+   jstat -gc PID
+   查看堆内存使用情况
+   jmap -heap 71614
+   jmap -heap 进程号
+
+3. 导出dump;使用分析工具分析对象    分析工具：HeapAnalyzer
+
+   jmap -dump:live,format=b,file=dump.hprof PID
+
+**操作**
+
+- top：找到占用内存(RES列)高的Java进程PID。
+- jmap -heap PID：查看heap内存使用情况。
+- jps -lv ：查看JVM参数配置。
+- jstat -gc PID 1000：收集每秒堆的各个区域具体占用大小的gc信息。
+- jmap -dump:live,format=b,file=heap_dump.hprof PID ：导出堆文件。
+- 使用MAT打开堆文件，分析问题。
+
+
+
+
 
 ## 如何查看当前Java程序里哪些对象正在使用，哪些对象已经被释放
 
@@ -206,31 +258,7 @@ https://blog.csdn.net/baiye_xing/article/details/90483169
    3. 还有可能是死锁，此时会直接提示。关键字：deadlock.
 5. jmap -dump:format=b,file=filename pid   （导出某进程下内存heap输出到文件中。可以通过eclipse的mat工具查看内存中有哪些对象比较多）
 
-## 运行时，如果程序内存过高，怎么排查
 
-例如频繁创建对象,内存泄露等这里会有俩种情况,一种报oom,一种导致系统卡,访问等待.
-
-1. Top指令查看
-
-2. 分析JVM内存分配，老年性，新生代的内存使用率，GC情况
-
-   jstat -gc PID
-   查看堆内存使用情况
-   jmap -heap 71614
-   jmap -heap 进程号
-
-3. 导出dump;使用分析工具分析对象    分析工具：HeapAnalyzer
-
-   jmap -dump:live,format=b,file=dump.hprof PID
-
-**操作**
-
-- top：找到占用内存(RES列)高的Java进程PID。
-- jmap -heap PID：查看heap内存使用情况。
-- jps -lv ：查看JVM参数配置。
-- jstat -gc PID 1000：收集每秒堆的各个区域具体占用大小的gc信息。
-- jmap -dump:live,format=b,file=heap_dump.hprof PID ：导出堆文件。
-- 使用MAT打开堆文件，分析问题。
 
 
 
@@ -314,10 +342,6 @@ https://www.cnblogs.com/chenchuxin/p/15259439.html
 
 
 ## JVM 调优经验
-
-
-
-
 
 
 
