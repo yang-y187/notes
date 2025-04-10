@@ -687,7 +687,7 @@ Spring可以使用带泛型的父类类型来确定这个子类类型
 
 如下图所示，调用bookservice和userservice方法，因为继承baseservice，所以继承的方法以及属性也可调用。以bookservice为例，调用bookservice的save方法，会传入泛型Book，则自动注入泛型，会找到baseDao，baseDao的泛型为Book，因此找到BookDao。BookDao继承了baseDao。所以即使baseservice以及basedao没有加入IOC容器仍可进行调用。就是因为真正调用的方法为继承子类。
 
-![Image](/../Spring.assets/Image.png)
+![Image](Spring.assets/Image.png)
 
 
 

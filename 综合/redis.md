@@ -767,7 +767,7 @@ Redis自定义了字符串结构：SDS（**简单动态字符串**）
 
 ### 7，ListPack
 
-紧凑列表，设计ListPack是为了替换掉zipList，相应的优点
+紧凑列表，redis 6.0以后 设计ListPack是为了替换掉zipList，相应的优点
 
 1. 降低复杂度，实现更加简单
 2. 在内存和CPU消耗，与zipList持平甚至更好
