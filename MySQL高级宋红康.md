@@ -344,7 +344,7 @@ InnoDB中，索引按不同的物理方式可以分为**聚簇索引**和**非�
 B+树的插入必须保证插入后叶子节点的记录依然有序。【**可以理解为叶子从下往上生长**】
 
 - 非叶子节点、叶子节点没满
-  - 细节插入到叶子节点
+  - 直接插入到叶子节点
 - 非叶子节点没满、叶子节点满
   1. 拆分叶子节点
   2. 中间的节点放在非叶子节点
@@ -1265,10 +1265,9 @@ redo log日志写入分为两个阶段，
 
 - “拉”是指 MySQL 从库定期询问主库是否有数据更新，这种方式频繁询问，资源消耗多，效率低且同步延迟大。
 
-
 **那么 MySQL 具体是怎么同步 binlog 的呢？**
 
-- slave 与 master 建立连接之后，会把当前哪个 binlog 文件（MASTER_LOG_FILE）和具体偏移位置（MASTER_LOG_POS) 告诉 master。对应的，主库会启动一个 log dump 线程，根据传过来的（file，pos）在本地的binlog中查找，并把剩下的 binlog 发送给slave。这个过程是 pull 模式。
+- slave 与 master 建立连接之后，会把当前的binlog 文件（MASTER_LOG_FILE）和具体偏移位置（MASTER_LOG_POS) 告诉 master。对应的，主库会启动一个 log dump 线程，根据传过来的（file，pos）在本地的binlog中查找，并把剩下的 binlog 发送给slave。这个过程是 pull 模式。
 
 
 - 当主从数据一致之后，master 收到的修改类操作，都会实时传播（propagate）给 slave，此时属于 push 模式。
@@ -1282,6 +1281,8 @@ redo log日志写入分为两个阶段，
 # 杂七杂八知识点
 
 - varchar(n) n指定的不是字节长度，而是容纳长度，如：一个utf-8的汉字需要3个字节存储，那么varchar（n）可以最大存储n个汉字，即3*n个字节。utf-8的字母则是一个字节，存储的内容MySQL会进行分析，找出最少的存储方式。
+
+- bigint(3)：
 
 - 数据库更新时，假设 set a = 3 where id = xx，如果数据库当前行的数据已经是3
 

@@ -490,6 +490,43 @@ double x = 0.3 x*3==0.9?   不等于，为什么
 
 
 
+## JDK8之后版本，大更新
+
+- **JDK9**
+
+  - 接口私有方法：支持接口定义私有方法
+
+- **JDK11**
+
+  - HTTP Client API标准化 支持http2.0的客户端
+  - ZGC垃圾回收器
+  - 单文件源码运行
+    - java解释器直接执行java代码，源码在内存中生成，无需在磁盘生成.class文件
+  - 字符串增强：isBlank()、stripLeading 去除头部空格、stripTrailing 去除尾部空格
+
+- **JDK14**
+
+  - **`switch` 表达式 (标准化)**：简化 switch 语法，进行了增强，支持Lambda表达式
+  - Record类型：在枚举、接口、类新增了Record类型，不可变类，自带toString、hashCode、equals，全参构造器等
+
+- **JDK16**
+
+  - 模式匹配增强 **`instanceof`**：instanceof 判断类型正确后，直接转换为该类型，无需手动转换
+
+- **JDK17**
+
+  - **Switch 模式匹配 (预览)**：支持类型匹配
+
+- **JDK21**
+
+  - 支持虚拟线程：轻量级线程，支持百万级并发
+
+  
+
+​	
+
+
+
 
 
 
