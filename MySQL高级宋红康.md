@@ -59,9 +59,14 @@
 
    SQL查询需要使用对当前SQL语句进行优化，生成最优的方案。
 
-4. **执行器：**
+4. **预处理阶段**：
 
-   首先判断用户是否有权限，如果没有，则权限错误。否则执行SQL。
+   - 检查数据库/表/列级别的权限
+   - 对于RR账号，在此阶段会拦截写操作
+
+5. **执行器：**
+
+   执行SQL。
 
 ![image-20220315151725876](MySQL%E9%AB%98%E7%BA%A7%E5%AE%8B%E7%BA%A2%E5%BA%B7.assets/image-20220315151725876.png)
 
@@ -262,7 +267,7 @@ Change Buffer包括Insert Buffer，update Buffer，Delete Buffer。其他与Inse
 - **MyISAM只缓存索引，不缓存真实数据；InnoDB不仅缓存索引还要缓存真实数据， 对内存要求较高 ，而且内存大小对性能有决定性的影响。（索引方式不同）**
 - MyISAM索引方式是非聚簇索引，InnoDB包含一个聚簇索引
 - MyISAM引擎每次查找都需要回表
-- InnoDB数数据文件本身就是索引文件，而MYISAM索引文件与数据文件是分离的，索引文件保存数据的地址
+- InnoDB数据文件本身就是索引文件，而MYISAM索引文件与数据文件是分离的，索引文件保存数据的地址
 - InnoDB中，非聚簇索引的叶子节点的data域保存的是数据主键，而MYISAM保存的是数据地址。可以直接读取数据，InnoDB需要两次查找操作，在时间上，MyISAM更快。
 
 # 6，索引的数据结构
@@ -339,7 +344,7 @@ InnoDB中，索引按不同的物理方式可以分为**聚簇索引**和**非�
 B+树的插入必须保证插入后叶子节点的记录依然有序。【**可以理解为叶子从下往上生长**】
 
 - 非叶子节点、叶子节点没满
-  - 细节插入到叶子节点
+  - 直接插入到叶子节点
 - 非叶子节点没满、叶子节点满
   1. 拆分叶子节点
   2. 中间的节点放在非叶子节点
@@ -655,6 +660,12 @@ Using temporary： 应用到order by 或者 group by。很慢很慢 ，一般出
 Using filesortUsing join buffer：join 连接条件key未使用索引，很慢
 
 impossible where：where 条件逻辑错误。
+
+using index：命中了索引覆盖
+
+using index conditon：命中了索引下推
+
+using index merge: 命中了索引合并
 
 ## 5，索引失效的情况
 
@@ -1245,6 +1256,24 @@ redo log日志写入分为两个阶段，
 
 
 
+- ### ==**主从复制是推还是拉？**==
+
+- binlog 的同步可以是 slave 向 master 拉取（pull），也可以是 master 向 slave 推送（push），应该选择哪种方式？
+
+- “推”是指 MySQL 主库在有数据更新时推送变更给从库，这种方式只有在数据有变更的时候才会发生，资源消耗少，同步及时。
+
+
+- “拉”是指 MySQL 从库定期询问主库是否有数据更新，这种方式频繁询问，资源消耗多，效率低且同步延迟大。
+
+**那么 MySQL 具体是怎么同步 binlog 的呢？**
+
+- slave 与 master 建立连接之后，会把当前的binlog 文件（MASTER_LOG_FILE）和具体偏移位置（MASTER_LOG_POS) 告诉 master。对应的，主库会启动一个 log dump 线程，根据传过来的（file，pos）在本地的binlog中查找，并把剩下的 binlog 发送给slave。这个过程是 pull 模式。
+
+
+- 当主从数据一致之后，master 收到的修改类操作，都会实时传播（propagate）给 slave，此时属于 push 模式。
+
+
+- 所以 MySQL 主从复制是**推拉结合**。
 
 
 
@@ -1253,6 +1282,7 @@ redo log日志写入分为两个阶段，
 
 - varchar(n) n指定的不是字节长度，而是容纳长度，如：一个utf-8的汉字需要3个字节存储，那么varchar（n）可以最大存储n个汉字，即3*n个字节。utf-8的字母则是一个字节，存储的内容MySQL会进行分析，找出最少的存储方式。
 
-- 数据库更新时，假设 set a = 3 where id = xx，如果数据库当前行的数据已经是3
+- bigint(3)：
 
+- 数据库更新时，假设 set a = 3 where id = xx，如果数据库当前行的数据已经是3
 
