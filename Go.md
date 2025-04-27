@@ -630,23 +630,95 @@ channel <- value //设置管道值Value到channel
 <- channel				// 接收并丢弃
 x := <-channel		// 从channel中接收数据 并赋值给x
 x, ok := <-channel // x表示读取的值，ok 表示 检查通道是否已关闭
+// 通道可遍历，若c为空，则阻塞
+for num := range c {
+	XXXX		
+}
+// 关闭通道
+close(c)
+```
+
+
+
+- 关闭通道
+  - channel不能像文件一样经常关闭，只有在确实没有数据发送时才能去关闭
+  - 关闭channel后，无法向channel发送数据（出现panic错误后导致接收理解返回0值）
+  - 关闭channel后，可以继续从channel接收数据
+  - 对于nil channel，无法收发都会阻塞
+
+
+
+### channel的缓冲
+
+- ### 无缓存的channel
+
+  1. 两个goroutine 都达到了通道，但都没有开始执行发送和接收
+  2. 左侧的goroutine向通道内发送数据，此时，这个goroutine会在通道中锁住，知道交换完成
+  3. 右侧的goroutine从通道中接收数据，这个goroutine一样也会在通道中被锁住，直到交换完成
+  4. 图4,5 进行了交换数据，执行到图6，两个goroutine 被锁住得到了释放。
+
+![image-20250427084918515](Go.assets/image-20250427084918515.png)
+
+
+
+- ### 带缓冲的channel
+
+  make channel 指定容量则是带缓存，没有指定则没有带
+
+  1. 第一步，右侧的goroutine从通道中接收一个值
+
+  2. 第二步，右侧的goroutine独立完成接收值的动作，左侧的goroutine 正在发送新值到通道里
+
+  3. 第三步，左侧发送值，右侧取值，两个步骤既不同步也不会相互阻塞
+
+  4. 第四步，所有接收和发送完成，通道中也允许存有几个值
+
+     
+
+     特点：当channel已经满了，添加数据会阻塞；当channel为空，从里面取数据也会阻塞
+
+  5. ![image-20250427085711102](Go.assets/image-20250427085711102.png)
+
+
+
+### select
+
+监控channel的状态，select 可以完成监控多个channel的状态。
+
+单流程下一个go只能监控一个channel的状态，select可以完成多个channel的状态监控
+
+
+
+```go
+select {
+	case c <- x:
+		// 如果c可写，则执行该case语句
+	case <- c:	
+		// 如果c可读，则执行该case语句
+	default:
+		// 若都没有执行成功，则进入default执行流程
+	}
 ```
 
 
 
 
 
+## Go Modules
+
+go modules 是Go语言的依赖解决方案
+
+- 解决GO语言的依赖问题
+
+- 淘汰现有的goPath的使用模式
+
+  
 
 
 
+- ### GoPath的缺点
 
-
-
-
-
-
-
-
-
-
+  - 无版本控制的概念
+  - 无法同步一致第三方的版本号
+  - 无法指定当前项目引用的第三方版本号
 
