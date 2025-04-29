@@ -722,3 +722,55 @@ go modules 是Go语言的依赖解决方案
   - 无法同步一致第三方的版本号
   - 无法指定当前项目引用的第三方版本号
 
+
+
+### Go Modules模式
+
+- #### go mod命令
+
+  - go mod init 生成go.mod
+  - go mod download 下载go.mod文件中指定的所有依赖
+  - go mod tidy 整理现有的依赖
+  - go mod graph 查看现有的依赖结构
+  - go mod edit 编辑 go.mod文件
+  - go mod vendor 导出项目所有的依赖到vendor 的目录
+  - go mod verify 校验一个模式是否被篡改过
+  - go mod why 查看问什需要依赖某个模块
+
+- go mod 环境变量
+
+  - GO111MODULE 是否开启 go modules模式
+  - GOPROXY 项目依赖的第三方依赖库的下载地址，可设置为国内 
+  - GOSUMDB 校验拉取的第三方是否是完整的
+  - GONOPROXY 通过设置GOPROVATE即可
+  - GONOSUMDB 通过设置GOPRIVATE即可
+  - GOPRIVATE ：
+    - go env -w GOPRIVATE="git.example.com,github.com/aceld/zinx 表示git.example.com和github.com/aceld/zinx作为私有库，不会进行GOPROXY下载和校验
+    - go evn -w GOPRIVATE="*.example.com" 表示所有模块的路径为example.com的子域名
+
+- go env 查看环境变量
+
+  ​	
+
+### 使用Go Modules 初始化项目
+
+- 开启 Go Modules 保证GO111MODULE = on
+
+- 初始化项目
+
+  - 任意文件创建项目（不要求在src路径下）
+  - 创建go.mod文件，同时起当前项目的模块名 （生成的mod文件记录go版本和模块名信息）
+  - 在项目中编写代码，若依赖某个库 可以手动或者自动 down
+  - go mod文件会添加一行新代码 require github.com/aceld/zinx v0.0.0-20200315073925-f09df55dc746 // indirect
+    - 含义是当前模块依赖 github.com/aceld/zinx
+    - 依赖的版本是v0.0.0-20200315073925-f09df55dc746
+    - // indirect 表示当前包是间接依赖，而不是直接依赖
+  - go.sum文件 
+    - 罗列当前项目中直接或者间接依赖的所有模块版本，保证今后项目依赖的版本不会被篡改
+    - h1:hash 表示对整个项目的zip文件打开后的所有文件的校验和生成hash，若不存在则可能有异常
+    - 可以指定某个文件 生成hash go.mod h1:hash
+
+  
+
+
+
