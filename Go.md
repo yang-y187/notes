@@ -361,9 +361,15 @@ type Book struct {
   title string
   auth string
 }
-func changeBook(book Book) {
+func changeBook(book *Book) {
   xxx
 }
+// 创建1
+sp1 := SpuerMan{Human{父类属性。。。}, 子类属性}
+// 创建2
+var sp2 SpuerMan
+sp2.属性1 = xxx
+sp2.属性2 = xxx
 ```
 
 **函数调用传的是副本，而非对象本身**，因此使用它时需要设计为地址传递才可 *Book
@@ -770,7 +776,22 @@ go modules 是Go语言的依赖解决方案
     - h1:hash 表示对整个项目的zip文件打开后的所有文件的校验和生成hash，若不存在则可能有异常
     - 可以指定某个文件 生成hash go.mod h1:hash
 
-  
+
+
+
+**修改项目模块的版本依赖关系**
+
+项目引包： require github.com/aceld/zinx v0.0.0-20200306023939-bc416543ae24 // indirect
+
+可以替换为 go mod edit -replace=zinx@v0.0.0-20200306023939bc416543ae24=zinx@v0.0.0-20200221135252-8a8954e75100
+
+
+
+go mod文件会添加该命令行 replace zinx v0.0.0-20200306023939-bc416543ae24 => zinx v0.0.0-20200221135252-8a8954e75100
+
+
+
+
 
 
 
