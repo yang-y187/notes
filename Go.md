@@ -220,6 +220,156 @@ import (
 
 
 
+## 高阶函数
+
+go 中函数的高阶用户发
+
+### 回调
+
+函数可以作为其他函数的入参进行传递，可以在该函数中调用执行
+
+Add 函数就作为了callback 函数的入参，并在callback 函数中执行了 Add 函数
+
+```go
+func main() {
+    callback(1, Add) //输出 The sum of 1 and 2 is: 3
+}
+
+func Add(a, b int) {
+    fmt.Printf("The sum of %d and %d is: %d\n", a, b, a+b)
+}
+
+func callback(y int, f func(int, int)) {
+    f(y, 2) // this becomes Add(1, 2)
+}
+```
+
+
+
+### 函数类型
+
+函数也可以像值地址一样传递。由此可以像注册器一样注册和获取对应的函数。
+
+type 函数类型名 func(入参) (出参)
+
+没有{}函数实现
+
+
+
+- 首先定义了函数类型 名=Adder
+- 有具体的函数add实现，注意出入参相同
+- 使用时，需要将具体的函数赋值给函数类型 Adder
+- 可以直接调用
+
+```go
+// 定义函数类型
+type Adder func(a, b int) int
+
+// 实现函数类型
+func add(a, b int) int { return a + b }
+
+// 调用方式
+var op Adder = add
+result := op(10, 5) // 直接调用，result = 15
+```
+
+
+
+**深化**
+
+可以作为框架中中间件模式的实现方式
+
+```go
+// 定义端点和中间件类型
+type Endpoint func(ctx context.Context) (string, error)
+type Middleware func(Endpoint) Endpoint
+
+// 基础端点
+func getHomePage(ctx context.Context) (string, error) {
+    return "首页内容", nil
+}
+
+// 中间件
+func loggingMiddleware(next Endpoint) Endpoint {
+    return func(ctx context.Context) (string, error) {
+        log.Println("开始处理请求")
+        result, err := next(ctx) // 调用下一个处理器
+        log.Println("结束处理请求")
+        return result, err
+    }
+}
+
+// 调用方式
+finalEndpoint := loggingMiddleware(getHomePage)
+result, err := finalEndpoint(ctx) // 调用增强后的端点
+```
+
+
+
+### 匿名函数
+
+
+
+可以给匿名函数名称，后续可以直接调用，类似 Java 中的 function 的匿名实现
+
+```go
+    // 不带函数名 匿名函数直接赋值给一个变量： 
+    who := func (name string, age int) (string, int) { 
+        return name, age
+    } 
+    a,b := who("age",20) 
+    fmt.Println(a,b) //Runsen 20
+```
+
+
+
+### 闭包函数
+
+匿名函数引用了外部作用域中的变量，就是闭包函数。闭包函数可以多次调用。
+
+作用：**缩小变量作用域，减少对全局变量的污染**。
+
+
+
+没有闭包函数
+
+```go
+func adder(x int) int {
+    return x * 2
+}
+
+func main() {
+    var a int
+    for i := 0; i < 10; i ++ {
+        a = adder(a+i)
+        fmt.Println(a)
+    }
+}
+```
+
+闭包函数的实现方式
+
+定义一个返回函数的函数，内部的属性只需要初始化一次。
+
+```go
+func adder() func(int) int {
+    res := 0
+    return func(x int) int {
+        res = (res + x) * 2
+        return res
+    }
+}
+
+func main() {
+    a := adder()
+    for i := 0; i < 10; i++ {
+        fmt.Println(a(i))
+    }
+}
+```
+
+
+
 
 
 ## 指针
@@ -261,7 +411,7 @@ var array2 [10]int := {1,2,3,4}
 var array3 [4]int := {1,2,3,4}
 
 
-func method(array [4]int) {
+func method(array [4]int) { 
   // 只能传长度为4的数组，且是值传递，main函数创建的数组，调用该函数时，是传入的数组副本，修改数组内容不会影响main的数组，不建议使用
 }
 ```
@@ -803,11 +953,30 @@ go mod文件会添加该命令行 replace zinx v0.0.0-20200306023939-bc416543ae2
 
 
 
+# 开发工具
 
 
 
+## 1、部署编排
 
+可以并行执行，等待所有执行完成 wg.Wait()再执行后续逻辑
 
+```go
+	wg := sync.WaitGroup{}	
+	wg.Add(3)
+	// 注意，传入的是&wg 地址
+	go handlerTask1(&wg)
+	go handlerTask2(&wg)
+	go handlerTask3(&wg)
+	wg.Wait()
+// 执行完成后需要制定 Done 标记执行完成
+func handlerTask1(wg *sync.WaitGroup) {
+	defer wg.Done()
+	fmt.Println("执行任务 1")
+}
+```
+
+返回值等信息可以放在 context 容器中，不必等 channel 的返回值再处理
 
 
 
