@@ -19,45 +19,21 @@
 
     - **static方法不参与继承，也不参与序列化**，父类有static修饰的方法，则子类可以调用，也可以声明一个static修饰的一样的方法。
 
-    - ```
+    - ```Java
       class A{
-      ```
-
-      ```
-       public static void a(){
-      ```
-
-      ```
-        System.out.println("a");
-      ```
-
-      ```
-       }
-      ```
-
-      ```
+        public static void a(){
+        	System.out.println("a");
+        }
       }
-      ```
-
-      ```
+      
       class B extends A{
-      ```
-
-      ```
-       public static void a(){
-      ```
-
-      ```
-        System.out.println("b");
-      ```
-
-      ```
-       }
-      ```
-
-      ```
+        public static void a(){
+        	System.out.println("b");
+        }
       }
       ```
+    
+      
 
     - 调用时，只看是哪个类调用。若是A调用，则输出’a‘,若是B调用，则输出’b‘。static修饰的方法属于类，与对象无关。
 
