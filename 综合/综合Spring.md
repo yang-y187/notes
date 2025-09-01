@@ -47,7 +47,7 @@ order.method2();
 
 
 
-## AOP：AspectJ、原生动态代理，CGLIB关系 
+## ~~AOP：AspectJ、原生动态代理，CGLIB关系~~ 
 
 ## Spring 中的bean 是线程安全的吗？
 
