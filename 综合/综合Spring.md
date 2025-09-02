@@ -156,23 +156,17 @@ spring内部有三级缓存：
 
 
 
-## Bean的注入过程
+## ~~Bean的注入过程~~
 
 Bean的注入过程就是Bean的创建过程，IOC启动时的创建过程。
 
-## SpringBoot之三种常见的依赖注入方式
+## ~~SpringBoot之三种常见的依赖注入方式~~
 
 https://blog.csdn.net/G_x_n/article/details/118693159
 
 - 成员变量注入
 - 构造函数注入
 - setter方法注入
-
-
-
-
-
-
 
 ## Bean的自动注入方式
 
@@ -430,7 +424,9 @@ https://blog.csdn.net/weixin_42036952/article/details/102493045
 - HandlerInterceptor：它拦截的是Http请求的信息，优先于MethodInterceptor。拦截请求地址，比后者先执行。类似过滤器。
 - MethodInterceptor：  拦截指定类型的方法，通过动态代理模式实现。
 
-## SpringBoot的启动过程 
+## ~~SpringBoot的启动过程~~ 
+
+看springboot 启动流程
 
 https://www.cnblogs.com/Narule/p/14253754.html
 
