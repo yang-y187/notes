@@ -482,3 +482,85 @@ https://www.cnblogs.com/Narule/p/14253754.html
   - 会完全捕捉异常，只有catch不再往上级调用者抛出异常，那么会被吃掉，不向上一级调用者传播
 - AOP
   - 动态代理的增强处理，处理异常后，仍会向上一级调用者传播 即（AOP只是一个切面，无法阻止方法行为的执行，更多的是增加一个步骤）
+
+
+
+## Spring IOC 跟SpringBoot IOC的区别
+
+Spring 的 IOC 启动和 Spring Boot 的 IOC 启动在核心原理上一致，都是基于依赖注入实现对象管理，但**在启动过程、配置方式和自动化程度上有显著区别**，主要体现在以下几个方面：
+
+### 1. 启动入口不同
+
+- **Spring 传统 IOC 启动**：
+  需要手动编写启动代码，通过 `ClassPathXmlApplicationContext` 或 `AnnotationConfigApplicationContext` 加载配置类 / XML 配置文件，例如：
+
+  ```java
+  // 基于 XML 配置
+  ApplicationContext context = new ClassPathXmlApplicationContext("applicationContext.xml");
+  
+  // 基于注解配置
+  ApplicationContext context = new AnnotationConfigApplicationContext(AppConfig.class);
+  ```
+
+  **开发者需显式指定配置源（XML 或配置类）。**
+
+- **Spring Boot IOC 启动**：
+  通过 `@SpringBootApplication` 注解标记主类，由 `SpringApplication.run()` 方法启动，例如：
+
+  ```java
+  @SpringBootApplication
+  public class MyApplication {
+      public static void main(String[] args) {
+          SpringApplication.run(MyApplication.class, args);
+      }
+  }
+  ```
+
+  无需手动指定配置源，框架会自动扫描和加载。
+
+### 2. 配置方式不同
+
+- **Spring 传统 IOC**：
+  依赖显式配置，有两种方式：
+  - XML 配置：通过 `<bean>` 标签定义对象及依赖关系。
+  - 注解配置：需手动添加 `@Configuration`、`@ComponentScan` 等注解，并在启动时指定配置类。
+    开发者需手动管理组件扫描范围、第三方依赖的 bean 定义（如数据源、事务管理器等）。
+- **Spring Boot IOC**：
+  采用 “约定优于配置” 原则，通过以下方式简化配置：
+  - 自动扫描：`@SpringBootApplication` 包含 `@ComponentScan`，默认扫描主类所在包及其子包。
+  - 自动配置（AutoConfiguration）：通过 `@EnableAutoConfiguration` 触发，基于 classpath 中的依赖自动生成常用 bean（如 `DataSourceAutoConfiguration` 自动配置数据源）。
+  - 外部化配置：通过 `application.properties`/`yaml` 集中管理配置，无需硬编码。
+
+### 3. 启动流程差异
+
+- **Spring 传统 IOC 启动流程**：
+  1. 加载配置文件 / 配置类。
+  2. 解析配置，注册 bean 定义到 `BeanDefinitionRegistry`。
+  3. 初始化 `BeanFactory`，处理依赖注入。
+  4. 触发 `BeanFactoryPostProcessor` 和 `BeanPostProcessor` 等扩展点。
+  5. 完成 IOC 容器初始化。
+- **Spring Boot IOC 启动流程**：
+  在传统 Spring 流程基础上增加了自动化处理：
+  1. 初始化 `SpringApplication`，准备环境（Environment）、监听器（Listener）等。
+  2. 执行 `SpringApplicationRunListener` 生命周期回调（如 `starting()`、`environmentPrepared()`）。
+  3. 触发自动配置：通过 `@EnableAutoConfiguration` 加载 `META-INF/spring.factories` 中定义的自动配置类，动态注册 bean。
+  4. 执行传统 Spring 的 IOC 容器初始化流程。
+  5. 启动嵌入式服务器（如 Tomcat，若引入 web 依赖）。
+
+### 4. 第三方依赖集成方式
+
+- **Spring 传统 IOC**：
+  集成第三方组件（如 MyBatis、Redis）时，需手动配置对应的 bean（如 `SqlSessionFactory`、`RedisTemplate`），并在 XML 或配置类中显式定义。
+- **Spring Boot IOC**：
+  通过 “starters”（启动器）简化集成，例如引入 `spring-boot-starter-data-redis` 后，框架会自动配置 `RedisTemplate` 等 bean，开发者无需手动定义。
+
+### 5. 嵌入式服务器支持
+
+- **Spring 传统 IOC**：
+  若开发 Web 应用，需手动部署到外部服务器（如 Tomcat），IOC 容器启动不包含服务器启动逻辑。
+- **Spring Boot IOC**：
+  内置嵌入式服务器（默认 Tomcat），IOC 容器启动时会自动启动服务器，无需外部部署，实现 “一键运行”。
+
+### 总结
+
+Spring 传统 IOC 启动需要手动配置和管理更多细节，灵活性高但繁琐；Spring Boot 基于传统 Spring 核心，通过自动配置、 starters 和约定简化了 IOC 启动过程，降低了开发成本，更适合快速开发。两者核心都是 IOC 容器，但 Spring Boot 是 “增强版” 的启动方式，本质是对 Spring 功能的封装和自动化扩展。
