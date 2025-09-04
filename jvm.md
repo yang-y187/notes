@@ -749,14 +749,6 @@ Humongous Region 大对象分配对象
 
 G1的大多数行为都把Humongous Region作为老年代的一部分来进行看待。
 
-
-
-
-
-
-
-
-
 #### JDK 8u20 字符串去重
 
 过程：
