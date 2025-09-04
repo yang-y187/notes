@@ -915,5 +915,231 @@ CPU不会自己CPU飙升，一般是使用不当导致
 
 
 
+## 数据库的死锁
+
+死锁的四个必要条件：
+
+1. 互斥
+2. 占用并等待
+3. 非抢占
+4. 循环依赖
+
+### **死锁场景**
+
+- ### 场景1：账户转账死锁
+
+```sql
+-- 事务1：从账户1转100到账户2
+BEGIN;
+UPDATE accounts SET balance = balance - 100 WHERE id = 1; -- 获得账户1的锁
+UPDATE accounts SET balance = balance + 100 WHERE id = 2; -- 等待账户2的锁
+
+-- 事务2：从账户2转100到账户1  
+BEGIN;
+UPDATE accounts SET balance = balance - 100 WHERE id = 2; -- 获得账户2的锁
+UPDATE accounts SET balance = balance + 100 WHERE id = 1; -- 等待账户1的锁
+
+-- 死锁发生！
+```
+
+- ### 场景2：顺序不一致的死锁
+
+  ```sql
+  -- 事务1：先更新A再更新B
+  BEGIN;
+  UPDATE table_a SET value = 1 WHERE id = 1;
+  UPDATE table_b SET value = 2 WHERE id = 1;
+  
+  -- 事务2：先更新B再更新A
+  BEGIN;  
+  UPDATE table_b SET value = 3 WHERE id = 1;
+  UPDATE table_a SET value = 4 WHERE id = 1;
+  
+  -- 死锁发生！
+  ```
+
+
+
+### MySQL死锁检测
+
+数据库平台支持查询
+
+```sql
+-- 查看最近死锁信息
+SHOW ENGINE INNODB STATUS;
+
+-- 查看InnoDB状态（包含死锁信息）
+SHOW STATUS LIKE 'innodb_row_lock%';
+
+-- 监控死锁发生率
+SHOW GLOBAL STATUS LIKE 'innodb_deadlocks';
+```
+
+
+
+### 死锁的预防和解决
+
+1. ### 设置锁的等待时间
+
+```sql
+-- 数据库通常会自动检测并回滚一个事务
+-- MySQL的innodb_deadlock_detect默认开启
+-- 回滚代价较小的事务
+
+-- 设置死锁超时时间
+SET GLOBAL innodb_lock_wait_timeout = 50; -- 默认50秒
+```
+
+- ### 统一访问顺序
+
+```java
+// 代码层面保证相同的访问顺序
+public void transferMoney(Account from, Account to, BigDecimal amount) {
+    // 按照固定的ID顺序加锁
+    Account first = from.getId() < to.getId() ? from : to;
+    Account second = from.getId() < to.getId() ? to : from;
+    
+    synchronized (first) {
+        synchronized (second) {
+            // 执行转账操作
+            from.debit(amount);
+            to.credit(amount);
+        }
+    }
+}
+```
+
+- ### **使用事务重试机制**
+
+```java
+// 在应用层实现重试逻辑
+@Retryable(maxAttempts = 3, backoff = @Backoff(delay = 100))
+public void executeWithRetry(Runnable task) {
+    try {
+        task.run();
+    } catch (DeadlockLoserDataAccessException e) {
+        // 死锁发生时重试
+        throw e;
+    }
+}
+
+// 使用示例
+executeWithRetry(() -> {
+    accountService.transfer(1, 2, 100);
+});
+```
+
+- ### 4. **优化事务设计**
+
+```sql
+-- 保持事务简短
+BEGIN;
+-- 只包含必要的操作
+UPDATE accounts SET balance = balance - 100 WHERE id = 1;
+UPDATE accounts SET balance = balance + 100 WHERE id = 2;  
+COMMIT;
+
+-- 避免在事务中执行耗时操作
+```
+
+- ### 5. **合理的索引设计**
+
+```sql
+-- 确保查询使用索引，减少锁范围
+CREATE INDEX idx_accounts_id ON accounts(id);
+CREATE INDEX idx_orders_user_id ON orders(user_id);
+
+-- 避免全表扫描导致的表锁
+```
+
+- ### 6. **锁超时设置**
+
+```
+-- 设置锁等待超时
+SET SESSION innodb_lock_wait_timeout = 30; -- 30秒超时
+
+-- 在SQL中使用NOWAIT
+SELECT * FROM accounts WHERE id = 1 FOR UPDATE NOWAIT;
+
+-- 使用SKIP LOCKED（MySQL 8.0+）
+SELECT * FROM accounts WHERE balance > 1000 FOR UPDATE SKIP LOCKED;
+```
+
+
+
+## 📊 死锁预防策略对比
+
+| 策略           | 实现方式           | 优点         | 缺点             |
+| :------------- | :----------------- | :----------- | :--------------- |
+| **统一顺序**   | 按固定顺序访问资源 | 彻底预防死锁 | 需要全局协调     |
+| **超时机制**   | 设置锁等待超时     | 简单易实现   | 可能误杀正常事务 |
+| **重试机制**   | 应用层捕获重试     | 对业务透明   | 增加系统复杂度   |
+| **减少锁粒度** | 使用行锁代替表锁   | 减少冲突概率 | 需要数据库支持   |
+
+### 🔧 高级死锁处理技术
+
+- ### **悲观锁与乐观锁**
+
+```sql
+-- 悲观锁：提前加锁
+SELECT * FROM accounts WHERE id = 1 FOR UPDATE;
+
+-- 乐观锁：使用版本号
+UPDATE accounts 
+SET balance = balance - 100, version = version + 1 
+WHERE id = 1 AND version = @current_version;
+```
+
+- ### ~~2. **使用SERIALIZABLE隔离级别**~~
+
+```sql
+-- 最高隔离级别，但性能代价大
+SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+BEGIN;
+-- 事务操作
+COMMIT;
+```
+
+### 3. **应用层分布式锁**
+
+```java
+// 使用Redis或ZooKeeper实现分布式锁
+public boolean tryTransferWithDistributedLock(String lockKey, int timeout) {
+    String lockValue = redis.set(lockKey, "locked", "NX", "EX", timeout);
+    if ("OK".equals(lockValue)) {
+        try {
+            // 执行转账操作
+            return true;
+        } finally {
+            redis.del(lockKey);
+        }
+    }
+    return false;
+}
+```
+
+## 📝 死锁排查 checklist
+
+### 当发生死锁时：
+
+1. ✅ 检查数据库死锁日志
+2. ✅ 分析事务执行顺序
+3. ✅ 审查SQL语句和索引
+4. ✅ 检查应用层锁使用
+5. ✅ 评估事务隔离级别
+6. ✅ 考虑重试机制实现
+
+## 💡 最佳实践总结
+
+1. **保持事务简短** - 减少锁持有时间
+2. **统一访问顺序** - 避免循环等待
+3. **使用合适的索引** - 减少锁冲突
+4. **实现重试机制** - 处理偶尔的死锁
+5. **悲观锁与乐观锁** -
+   1. **悲观锁：先锁定在执行更新操作，或者是先加对操作数据的分布式锁**
+   2. **乐观锁：对表增加版本号**
+
+**记住**：完全避免死锁很难，但通过合理的设计可以显著降低死锁发生的概率和影响！
+
 
 
