@@ -64,8 +64,6 @@ Stack Overflow
 
 - 栈帧过大导致栈内存溢出
 
-
-
 ## 3，本地方法栈
 
 使用native[标识符](https://so.csdn.net/so/search?q=标识符&spm=1001.2101.3001.7020)修饰的方法就是本地方法
@@ -258,10 +256,6 @@ System.GC（）： 手动垃圾回收
 # 2.垃圾回收
 
 一般都是在空间不足时触发
-
-
-
-
 
 ## 1、如何判断对象可以回收
 
@@ -478,10 +472,6 @@ FullGC 前 MinorGC 	   -XX:+ScavengeBeforeFullGC
 - -XX:+UseConcMarkSweepGC：指定使用 CMS + Serial Old 垃圾回收器组合；
 - -XX:+PrintGC：开启打印 gc 信息；
 - -XX:+PrintGCDetails：打印 gc 详细信息。
-
-
-
-
 
 ## 4、垃圾回收器
 
