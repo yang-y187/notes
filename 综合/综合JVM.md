@@ -302,8 +302,6 @@ jmap -dump:live,format=b,file=dump.hprof PID
 
 
 
-
-
 1、通过jmap指定打印他的内存快照dump(Dump文件是进程的内存镜像。可以把程序的执行状态通过调试器保存到dump文件中)
 
 2、通过工具， VisualVM去分析dump文件，VisualVM可以加载离线的dump文件
