@@ -581,7 +581,7 @@ Explain + SQL语.
   
   ​	index 表示要查询命中索引下的所有叶子节点，可能是聚簇索引也可能是非聚簇索引。
 
-![Image](MySQL%E9%AB%98%E7%BA%A7%E5%AE%8B%E7%BA%A2%E5%BA%B7.assets/Image-16473478402643.png)
+<img src="MySQL高级宋红康.assets/image-20250908161040411.png" alt="image-20250908161040411" style="zoom:50%;" />
 
 - possible_keys：查询涉及到的字段上若存在索引，则该索引将被列出，但不一定被查询实际使用
 

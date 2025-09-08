@@ -81,7 +81,7 @@ java 是**懒加载迭代器**的思想，按需加载。【此按需加载是�
 - 日志框架的实现
   - log4j，slf4j都采用了SPI机制，需要修改代码
 - Spring代码
-  - Spring中的Bean加载机制就是实现了SPI思想， 通过读取classpath下的META-INF/spring.factories文件来`加载各种自定义的Bean`。
+  - Spring中的自动加载机制就是实现了SPI思想， 通过读取classpath下的META-INF/spring.factories文件来`加载各种自定义的Bean`。
 - Dubbo框架
   - 通过注解@SPI 声明拓展点接口，并在classpath下的META-INF/dubbo目录中提供实现类的配置文件，来实现扩展点的动态加载。
 
@@ -136,7 +136,7 @@ path:接口名称
 parameters：参数键值对
 ```
 
-ServiceBean实现了ApplicationLister，监听ContextRefreshedEvent时间，在Spring IOC容器刷新完成后调用onApplicationEvent方法，服务暴露的启动方法。获取配置的URL信息，再利用Dubbo SPI机制根据URL的参数，选择合适的实现类，实现拓展
+ServiceBean实现了ApplicationLister，监听ContextRefreshedEvent事件，在Spring IOC容器刷新完成后调用onApplicationEvent方法，服务暴露的启动方法。获取配置的URL信息，再利用Dubbo SPI机制根据URL的参数，选择合适的实现类，实现拓展
 
 通过javassist动态封装服务实现类，统一暴露出Invoker使得调用更方便，屏蔽了底层实现细节，然后封装成Exporter存储起来，等待消费者的调用，并且会将URL注册到注册中心，使得消费者可以获取服务提供者的信息。
 
@@ -154,10 +154,6 @@ ServiceBean实现了ApplicationLister，监听ContextRefreshedEvent时间，在S
 
 - 为什么搞本地暴露
   - 暴露的本地服务在内部调用的时候可以直接消费同一个JVM服务，避免了网络通信
-
-
-
-
 
 ![图片](Dubbo.assets/640-20240616220248157)
 
@@ -197,10 +193,6 @@ ReferencgetBean 实现了FactoryBean接口，当任何服务Interface进行注�
         - 生成消费者的链接，并注册到注册中心
         - 订阅注册中心的Providers目录、configurators目录、routers目录。若订阅的信息发生变化，会同步该Invoker。
         - 创建Invoker，包含netty client（通过网络通信）、通过cluser封装Invoker，使其只暴露一个Invoker。\
-
-
-
-
 
 invoker 分为多种：本地引入的invoke、直连的invoker、注册中心集群的invoker。「即使有多个Provider，服务引入时，也是获取一个invoker」Invoker 代表一个可执行体。Invoker屏蔽了调用细节，暴露出一个统一的执行体。
 
@@ -251,10 +243,6 @@ invoker 分为多种：本地引入的invoke、直连的invoker、注册中心�
 
 又可统称为API层和SPI层。通过微内核设计+SPI拓展。若实现定制化需求，则通过SPI拓展即可。
 
-
-
-
-
 - Service：业务层，技术开发的业务逻辑层
 - Config：配置层，根据ServiceConfig和ReferenceConfig，初始化配置信息
 - Proxy：代理层，服务提供者还是消费者都会生成一个代理类，使得服务接口透明化，代理层做远程调用和返回结果
@@ -266,8 +254,6 @@ invoker 分为多种：本地引入的invoke、直连的invoker、注册中心�
 - Transport：网络传输层，抽象了网络传输的统一接口，Netty、Mina等
 - Serialize：序列化层，将数据序列化成二进制流和反序列化
 
-
-
 ## 7、Dubbo 服务 负载均衡策略
 
 消费者调用的invoker是ClusterInvoker （将所有的Invoker）。相同的服务在一个服务目录中，服务目录是Invoker的集合。监听注册中心的Invoker变化，刷新本地invokers集合。
@@ -276,7 +262,7 @@ invoker 分为多种：本地引入的invoke、直连的invoker、注册中心�
 - 监听注册中心的变化，实现NotifyListener 接口，服务引入时会订阅
 - 刷新invoker，获取<方法名, Invoker 列表> 映射关系，并将相同服务的invoker进行合并，只返回一个invoker，保存在上面的Map中
 
-路由：将通过负载均衡决定调用哪天服务提供者，这是由消费者决定的。
+路由：将通过负载均衡决定调用哪台服务提供者，这是由消费者决定的。
 
 Dubbo判断哪台机器时，也会进行预热。就像缓存有预热、JIT有预热、服务器提供服务也需要预热。在负载均衡时，则降低刚启动机器的权重。
 
@@ -415,8 +401,6 @@ Dubbo判断哪台机器时，也会进行预热。就像缓存有预热、JIT有
 - 然后消费者调用的时候会目录里面得到 invoker 列表，会经过路由的过滤，得到这些 invokers 之后再由 loadBalance 来进行负载均衡选择一个 invoker，最终发起调用。
 - 这种过程其实是在 Cluster 的内部发起的，所以能在发起调用出错的情况下，用上容错的各种措施。
 
-
-
 ## 8、zk如何存储Dubbo生产者和消费者信息
 
 zk一个多叉树，类似文件目录结构。
@@ -452,14 +436,6 @@ zk会对Provider和Consumer加入watcher，可以拉取所有值。且都是临�
 ##  11、为什么用 javassist 而不用 jdk 动态代理是
 
 因为 javassist 快。
-
-
-
-
-
-
-
-
 
 
 
