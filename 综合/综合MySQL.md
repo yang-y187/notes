@@ -1071,6 +1071,3 @@ public boolean tryTransferWithDistributedLock(String lockKey, int timeout) {
    2. **乐观锁：对表增加版本号**
 
 **记住**：完全避免死锁很难，但通过合理的设计可以显著降低死锁发生的概率和影响！
-
-
-
