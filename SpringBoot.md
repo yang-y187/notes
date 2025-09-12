@@ -4,7 +4,7 @@
 typora-root-url: springBootImg
 ---
 
-# SpringBoot
+# ~~SpringBoot~~
 
 ##### 	快速创建
 
@@ -22,7 +22,7 @@ typora-root-url: springBootImg
 
 
 
-# SpringBoot基础篇（使用）
+# ~~SpringBoot基础篇（使用）~~
 
 ​	springBoot
 
@@ -1169,7 +1169,7 @@ public R getPage(@PathVariable int currentPage,@PathVariable int pageSize){
 1. 定义查询条件数据模型（当前封装到分页数据模型中）
 2. 异步调用分页功能并通过请求参数传递数据到后台
 
-# SpringBoot运维篇
+# ~~SpringBoot运维篇~~
 
 打包：Maven -package
 

@@ -2387,7 +2387,7 @@ public class IOCTest {
 }
 ```
 
-## 3，AOP（面向切面编程）
+## ==3，AOP（面向切面编程）==
 
 AOP：在程序运行期间，将**某段代码**==动态的切入==到**指定方法**的**指定位置**进行运行的编程方式，为面向切面编程。
 
@@ -6801,6 +6801,7 @@ SqlSession级别的缓存；默认缓存是一直存在的
 - 默认不开启二级缓存，需要手动配置
 - MyBatis二极缓存实现要求POJO实现Serializable接口
 - **二级缓存在Sqlsession关闭或者提交后才能生效**
+- 不建议使用二级缓存，而是使用reids
 
 **步骤**
 
@@ -6879,7 +6880,7 @@ MyBatits的Cache并不专业，可以导入包，实现强大功能
 ## ==Mybatis的运行原理==
 
 - 通过sql的xml创建sqlSessionFactory，会话工厂，全局只有一个
-- 每次执行，都会创建sqlSession
+- 每次执行，都会创建sqlSession。（一次sql事务即服务器与数据库的交互就是一次sqlsession）
 
 ![image-20220319205148814](Spring.assets/image-20220319205148814.png)
 
