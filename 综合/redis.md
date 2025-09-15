@@ -467,7 +467,7 @@ https://blog.csdn.net/qq_23564667/article/details/110917900
 
 ### 哨兵模式
 
-避免了因为master宕机导致redis集群全部不可用的情况。
+避免了因为master宕机导致redis集群全部不可用的情况，哨兵节点不区分主从，堆故障节点的处理是投票。
 
 哨兵Sentinel有以下功能：
 

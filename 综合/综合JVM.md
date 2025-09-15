@@ -230,7 +230,7 @@ https://blog.csdn.net/baiye_xing/article/details/90483169
       1. jstack [进程]|grep -A 10 [线程的16进制]    -A 10表示查找到所在行的后10行
          1. 例子： jstack 21125|grep -A 10 52f1  
          1. 所以也可以直接  jstack 进程ID |grep 线程ID   定位到出现问题的代码
-   3. 还有可能是死锁，此时会直接提示。关键字：deadlock.
+   3. 还有可能是死锁，此时会直接提示。关键字：deadlock.（死锁不会导致CPU飙升）
 5. jmap -dump:format=b,file=filename pid   （导出某进程下内存heap输出到文件中。可以通过eclipse的mat工具查看内存中有哪些对象比较多）
 
 ## jdk8默认的垃圾回收器
