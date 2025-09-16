@@ -605,6 +605,35 @@ Bitmaps 并不是实际的数据类型，而是定义在[String类](https://so.c
 - Redis 输出缓冲区可能导致的阻塞
   - 输出缓冲区（client output buffer）：是 redis-server 端实现的一个读取缓冲区，redis-server 在接收到客户端的请求后，把获取结果写入到 client buffer 中，而不是直接发送给客户端。从而可以继续处理客户端的其他请求，这样异步处理方式使 redis-server 不会因为网络原因阻塞其他请求的处理。
 
+## redis 慢查询 排查
+
+#### 使用Redis内置命令 `SLOWLOG`（最直接）
+
+这是Redis提供的专门用于查询慢查询日志的命令。
+
+- **查看当前慢日志**：
+
+```
+127.0.0.1:6379> SLOWLOG GET [number] // number 为仅 n 条慢查询执行
+```
+
+- #### 检查Redis配置（确认阈值）
+
+  - 慢查询的判定阈值是可配置的。你需要确认你的阈值是多少。
+
+  - **查看当前配置**：修改配置无需重启
+
+  - ```
+    127.0.0.1:6379> CONFIG GET slowlog-log-slower-than
+    ```
+
+  - `slowlog-log-slower-than`：单位是微秒（μs）。默认值是10000，即10毫秒。执行时间超过此值的命令会被记录到慢日志。
+  - **另一个相关配置**：`slowlog-max-len`：慢日志队列的最大长度。默认128，达到上限后会淘汰旧的日志。
+
+- 监控工具
+
+  
+
 # Redis原理
 
 ## 数据结构
