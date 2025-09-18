@@ -355,7 +355,7 @@ jmap -dump:live,format=b,file=dump.hprof PID
 
 1. **✅ 标配GC日志**：线上环境必须提前配置好详细的GC日志参数。
 2. **✅ 监控报警**：监控 `jstat` 输出或使用Prometheus+Grafana监控FGC频率和耗时。
-3. **✅ 看到Full GC**：第一时间保存现场 -> **摘流量** -> **生成Heap Dump**。
+3. **✅ ==看到Full GC**：第一时间保存现场 -> **摘流量** -> **生成Heap Dump**。==
 4. **✅ 分析日志**：首先看 `GCCause`，确定直接原因。
 5. **✅ 根因分析**：
    - `Allocation Failure` -> **MAT分析堆转储，找泄漏**。
