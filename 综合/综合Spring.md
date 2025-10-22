@@ -337,6 +337,19 @@ xml文件配置
 
 
 
+## Autowired增强
+
+spring 支持这种注入，注册器没必要启动时注入到map 中
+
+```java
+@Autowired
+private List<xxxService> serviceList;
+// xxxService 可以是接口，该接口的实现类加入 IOC 容器，也会注入到该List中,map也可以，key=bean 名称
+@Autowired
+private Map<String, xxxService> serviceMap;
+
+```
+
 ## Mybatis中分页方式有几种
 
 - 数组分页：查询出所有的数据，返回list集合。从集合中截取想要的分页数据

@@ -1075,3 +1075,17 @@ public boolean tryTransferWithDistributedLock(String lockKey, int timeout) {
    2. **乐观锁：对表增加版本号**
 
 **记住**：完全避免死锁很难，但通过合理的设计可以显著降低死锁发生的概率和影响！
+
+
+
+## replace into 和INSERT ... ON DUPLICATE KEY UPDATE
+
+替换操作，有则更新没有则插入。实际原理不同：
+
+| 特性           | `INSERT ... ON DUPLICATE KEY UPDATE` | `REPLACE INTO`               |
+| -------------- | ------------------------------------ | ---------------------------- |
+| **冲突时行为** | 更新现有记录                         | 删除旧记录 + 插入新记录      |
+| **自增 ID**    | 保持不变                             | 会递增                       |
+| **触发器**     | 仅 `INSERT`/`UPDATE`                 | `DELETE` + `INSERT`          |
+| **数据完整性** | 仅更新指定字段                       | 未指定的字段会被重置为默认值 |
+| **性能**       | 更高效（避免删除操作）               | 较低效（涉及删除+插入）      |
