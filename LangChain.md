@@ -1,6 +1,6 @@
 # LangChain
 
-# 简介
+# 1、简介
 
 ## 大模型的局限性：
 
@@ -142,7 +142,7 @@
 
 
 
-# 模型调用
+# 2、模型调用
 
 模型的调用分为： invoke() 、 stream() 和 batch() 方法，以及它们的异步版本 ainvoke() 、 astream() 和 abatch()
 
@@ -290,16 +290,16 @@ AIMessage(
 )
 ```
 
-### 总结
 
-#### 1. 核心内容与基本信息
+
+##### 1. 核心内容与基本信息
 
 - `content`：模型生成的文本回答，这是最关心的核心输出。
 - `id`：本次运行在 LangChain 内部生成的唯一标识（Run ID）。
 - `additional_kwargs`：包含特定供应商的额外参数。
   - `refusal`：如果模型拒绝回答（涉及敏感政策），此处会显示拒绝原因。
 
-#### 2. 消耗统计（Token Usage）
+##### 2. 消耗统计（Token Usage）
 
 这部分决定了这一次输入操作花费了多少 Token：
 
@@ -309,7 +309,7 @@ AIMessage(
 - `reasoning_tokens`：推理 Token 数。如果是 O1/O3 等推理模型，这里会显示它在思考阶段消耗的 Token。
 - `cached_tokens`：缓存命中的 Token 数。重复提问时，如果命中了模型缓存，这部分费用通常更低。
 
-#### 3. 响应元数据（Response Metadata）
+##### 3. 响应元数据（Response Metadata）
 
 这部分是 API 返回的原始详细信息：
 
@@ -320,7 +320,7 @@ AIMessage(
   - `length`：达到最大 Token 限制后被截断。
 - `system_fingerprint`：系统指纹，用于追踪模型后端的配置变更。
 
-#### 4. 性能与延迟（Latency Checkpoint）
+##### 4. 性能与延迟（Latency Checkpoint）
 
 这是对 API 响应速度的深度拆解，单位通常为毫秒（ms）：
 
@@ -331,7 +331,614 @@ AIMessage(
 - `pre_inference_ms`：推理前的预处理耗时，包括安全审核、Token 化等预处理过程。
 - `service_tbt_ms`：服务端 Token 之间生成的间隔时间，决定打字机效果是否丝滑。
 
-#### 5. 工具调用信息
+##### 5. 工具调用信息
 
 - `tool_calls`：结构化工具调用列表。如果模型决定调用某个 Python 函数或搜索工具，参数会记录在这里。
 - `invalid_tool_calls`：格式错误或未成功执行的工具调用尝试。
+
+### steam() 流式调用
+
+invoke 和 stream 有什么区别？ 
+
+**invoke()** ：同步调用，在模型输出完成后一次性获取响应，对于输出文本很长的场景，用户体验 不好。 
+
+**stream()** ：流式调用，实时返回响应片段。调用后，返回一个 迭代器(iterator) ，可以通过循环 来实时处理每一个新生成的chunk内容块
+
+**优点**： 响应速度更快 — 用户不必等待完整输出 交互体验更流畅 — 尤其在长文本或复杂推理场景下 可实时展示模型思考过程
+
+### batch()批量调用
+
+允许你一次性 发送一组请求 （含多条独立请求），模型会在后台 并行处理 ，然后返回 所 有结果的列表 。返回结果是乱序的
+
+
+
+# 3、LangSmith 的使用
+
+LangSmith 是 LangChain 生态系统中专门用于 LLM（大语言模型）应用调试、监控、评估和管理 的平 台。
+
+-  🔍 追踪(tracing)：记录每次 LLM 调用的详细信息 
+- 📊 监控(monitoring)：实时查看应用性能 
+- 🐛 调试(debug)：排查问题和优化性能 
+- 📈 评估(evaluate)：系统化测试 LLM 应用
+
+# 4、消息和提示词模版
+
+大模型是没有记忆，它的输出只和输入模型的内容有关系，很多大模型的API服务也没有在服务端维护会话历史，是**无状态**的，**如果应用需要记住对话历史，需要在程序中维护消息列表，每次对话把完整的上下文传递给模型。**
+
+![image-20260723085449323](LangChain.assets/image-20260723085449323.png)
+
+## 消息
+
+消息是模型交互的基本单元，通过角色roal分为不同的类型。
+
+![image-20260723083540982](LangChain.assets/image-20260723083540982.png)
+
+
+
+## 消息拓展属性
+
+### content/content_blocks
+
+content:数据内容，支持文本和列表，可以是字符串，也可以是图片
+
+![image-20260724211123687](LangChain.assets/image-20260724211123687.png)
+
+**content_blocks:** 目标是提供有一种跨模型供应商、标准化的多模态数据结构， 兼容content
+
+
+
+## 提示词模板
+
+**ChatPromptTemplate**：结构化的，包含多种元数据的消息列表已经取代了单一字符串，成为与模型交互的标准数据格式。
+
+**模型的输入输出都是结构化的消息列表**，使用提示词模版，预先设置部分提示词，设置场景和角色。
+
+支持 三种方式填充内容 invoke() 、 format() 、 format_messages()
+
+```python
+#参数类型这里使用的是tuple构成的list
+prompt_template = ChatPromptTemplate([
+	# 字符串 role + 字符串 content
+	("system", "你是一个AI开发工程师. 你的名字是 {name}."),
+	("human", "你能开发哪些AI应用?"),
+	("ai", "我能开发很多AI应用, 比如聊天机器人, 图像识别, 自然语言处理等."),
+	("human", "{user_input}")
+])
+#方式1：调用format()方法，返回字符串
+prompt_value = prompt_template.format(name="小谷AI", user_input="你能帮我做什么?")
+
+######结合提示词，调用大模型#########
+# 得到模型的输出
+output = model.invoke(prompt_value)
+# 打印输出内容
+print(output.content)
+
+```
+
+
+
+### 部分变量预填充 partial()
+
+预填充某些固定不变的变量，创建模板的变体。 
+
+**使用场景：** 某些变量在所有调用中都相同 需要为不同用户/场景创建定制模板
+
+```python
+from langchain_core.prompts import ChatPromptTemplate
+# 原始模板
+template = ChatPromptTemplate.from_messages([
+("system", "你是{role}，目标用户是{audience}"),
+("user", "{task}")
+])
+# 部分填充
+customer_support_template = template.partial(
+role="客服专员",
+audience="普通用户"
+)
+# 现在只需要提供 task
+messages = customer_support_template.invoke({"task":"解释退款政策"})
+print(messages)
+
+```
+
+
+
+### 消息占位符
+
+partial()只能填充部分变量，如果是在特定位置**插入消息列表**，
+
+**使用场景**：多轮对话系统存储历史消息以及Agent的中间步骤处理此功能非常有用
+
+##### 方式1：placeholder   JSON形式
+
+```python
+from langchain_core.prompts import ChatPromptTemplate
+template = ChatPromptTemplate.from_messages(
+    [
+    ("system", "你是一个有用的AI助手"),
+    ("placeholder", "{conversation}"),
+    ]
+)
+
+prompt_value = template.invoke(
+	{
+		"conversation": [
+            ("human", "你好!"),
+            ("ai", "今天我能帮你做什么？"),
+            ("human", "你能给我做一个冰激凌吗？"),
+            ("ai", "抱歉，我没有这样的能力"),
+		]
+	}
+)
+print(prompt_value)
+```
+
+##### 方式2：MessagesPlaceholder实例
+
+```python
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.messages import HumanMessage
+prompt_template = ChatPromptTemplate.from_messages([
+	("system", "You are a helpful assistant"),
+	MessagesPlaceholder("msgs")
+])
+prompt_template.invoke({"msgs": [HumanMessage(content="hi!")]})
+# prompt_template.format_messages(msgs=[HumanMessage(content="hi!")])
+```
+
+# 5、Tools
+
+tools工具是能够支持模型与外部交互的关键能力。注意：**MCP只是模型调用的一种方式**
+
+![image-20260724215800133](LangChain.assets/image-20260724215800133.png)
+
+
+
+
+
+## @tool注解
+
+可以自动将普通Python函数转换为智能体可调用的工具，方式最直接，代码量最少
+
+```python
+import os
+
+from dotenv import load_dotenv
+from langchain.chat_models import init_chat_model
+from langchain_core.tools import tool
+
+
+# 从 .env 文件中加载环境变量
+load_dotenv(override=True)
+
+CLOSEAI_API_KEY = os.getenv("CLOSEAI_API_KEY")
+CLOSEAI_BASE_URL = os.getenv("CLOSEAI_BASE_URL")
+
+model = init_chat_model(
+    model="gpt-5.4-mini",
+    model_provider="openai",
+    api_key=CLOSEAI_API_KEY,
+    base_url=CLOSEAI_BASE_URL,
+)
+
+
+# 定义工具
+@tool
+def get_weather(city: str) -> str:
+    """获取指定城市的天气。"""
+    # 你的实现
+    return "晴天，温度 15°C"
+
+
+# 绑定工具
+model_with_tools = model.bind_tools([get_weather])
+
+# AI 可以决定是否调用工具
+response = model_with_tools.invoke("北京天气如何？")
+# response = model_with_tools.invoke("2 + 3 = ？")
+
+# 检查 AI 是否要调用工具
+if response.tool_calls:
+    print("AI 想调用工具：", response.tool_calls)
+else:
+    print("AI 直接回答：", response.content)
+```
+
+
+
+![exec-c0ab9fab-e67f-4168-98e6-264a0b989ffd](LangChain.assets/exec-c0ab9fab-e67f-4168-98e6-264a0b989ffd.png)
+
+
+
+#### convert_to_openai_tool
+
+加载工具的描述信息，指定参数类型已经函数功能。
+
+三个双引号表示开始开始和结束
+
+```python
+def get_weather(dt: str, city: str="北京"):
+    """
+    天气查询工具
+    Args:
+    dt: 日期
+    city: 城市名称
+    """
+	return f"{city}天气晴朗"
+```
+
+### 工具要求
+
+1. 清晰的描述
+2. 功能单一
+3. 如何处理工具失败
+   1. 工具内部处理，避免无效参数处理
+   2. Agent级充实，可以在描述中写明，如果调用失败，可以尝试尝试方法解决问题
+   3.  配置重试规则：如果失败，最多尝试 3 次（即第 1 次正常调用 + 2 次重试） @retry(stop=stop_after_attempt(3))
+4. 结果返回字符串
+5. 选择同步vs异步
+   - **同步工具**：简单场景，CPU密集型任务
+   - **异步工具**：IO密集型
+
+
+
+# 6、结构化输出
+
+LangChain的结构化输出（Structured Output） 指的是：模型的输出，而非对用户的输出。
+
+**要求模型最终返回一个符合预定义结构的数据对象**，例如固定字段的JSON、Pydantic 模型、 TypedDict，而不再是无格式的自然语言文本。
+
+**特点：**
+
+- **更容易被代码处理**：下游可以直接读取，而不是从自然语言中再解析
+- **结果更稳定**：减少模型解析语义错误导致的整体失败
+- **更适合工程化**：适用于表单抽取、分类、路由、调用工具参数生成、工作流状态传递等场景。
+
+**当前模型支持以下几种结构**
+
+- Pydantic（字段校验、描述、嵌套结构，功能最丰富） 
+
+- TypedDict（轻量类型约束） 
+
+- JSON Schema（与前后端/跨语言接口最通用） 
+
+- dataclass 
+
+  
+
+**模型对象可以调用 with_structured_output() 绑定输出模式（schema）。**
+
+## Pydantic
+
+通过在运行时强制执行类型提示，确保数据的正确性和一致性，是**生产场景首选**。
+
+**需要满足的几个要素**：
+
+-  所有结构化输出的数据模型都必须继承 BaseModel 
+- 使用 类型提示 。Pydantic 支持丰富的字段类型：str 、int、float、List[xxx]、Optional[xxx]等 
+- 使用 Field() 添加字段默认值和描述，帮助 LLM 理解字段含义
+
+
+
+**使用场景**：调用模型之前，先指定返回结果格式
+
+```python
+class Person(BaseModel):
+"""人物信息"""
+name: str = Field(description="姓名")
+age: int = Field(description="年龄")
+occupation: str = Field(description="职业")
+
+# 创建结构化输出的 LLM
+structured_llm = model.with_structured_output(Person)
+# 调用
+result = structured_llm.invoke("张三是一名 30 岁的软件工程师")
+print(result)
+print(type(result))
+# result 是 Person 实例
+print(result.name) # "张三"
+print(result.age) # 30
+print(result.occupation) # "软件工程师"
+```
+
+**高级特性**
+
+- Optional ：指定某个字段可选，非必须返回值
+- Field(default="默认值", description="描述")：默认值
+- **枚举**：属性定义为枚举：
+  - \# 使用 Literal 直接限定字面量值 urgency: Literal["低","中","高"] = Field(description="紧急程度")
+- 列表，定义属性为List
+- 对象嵌套：属性是一个额外的对象属性，非基础字段，建议嵌套层级<=3
+- 限制条件
+
+**执行流程**：
+
+1. 定义Pydantic结构
+2. 协议转换：定义数据结构后，通过Pydantic的底层方法，将对象转换为标准的JSON Schema。
+3. 模型交互与强约束：将该JSON Schema包装到大模型的输入，**JSON的处理作为tool传给LLM**，LLM有参数字段支持**语法采样约束**，输出时严格按JSON Schema的语法进行
+4. 自动解析与验证：LLM返回JSON的字符串后，将解析，验证，并返回实际的对象。
+
+![image-20260725201430773](LangChain.assets/image-20260725201430773.png)
+
+## TypedDict
+
+**即带有类型声明的字典结构**，适合快速定义字典结构且无需Pydantic重量级的场景。
+
+**TypedDict 主要是类型声明，不是运行时强校验器。**输出结果与目标类型不一致也不会抛异常
+
+
+
+```python
+from typing import TypedDict, List, Annotated
+    # 使用TypedDict定义嵌套结构
+class Actor(TypedDict):
+    """演员情况"""
+    name: Annotated[str, "演员姓名"]
+    role: Annotated[str, "饰演的角色"]
+
+class Movie(TypedDict):
+    """电影情况"""
+    title: Annotated[str, "电影标题"]
+    year: Annotated[int, "上映年份"]
+    director: Annotated[str, "导演"]
+    cast: Annotated[List[Actor], "演员列表"] # 嵌套列表定义
+    rating: Annotated[float, "评分"]
+
+```
+
+
+
+## JSON  Schema
+
+交互以JSON Schema规范拼接JSON字符串，比较繁琐，而且缺少校验机制，不推荐
+
+## @dataclass
+
+@dataclass是Python标准库提供的类装饰器，自动生成常用方法，近似于手写这些方法的普通类。
+
+- `__init__`
+- `_repr__` 
+- `__eq__`
+
+```python
+@dataclass
+class Movie():
+    """
+    电影的详细信息
+    """
+    title: str = Field(description="电影标题")
+    year: int = Field(description="电影上映年份")
+    director: str = Field(description="导演")
+    rating: float = Field(description="电影评分，满分十分")
+    
+structured_model = model.with_structured_output(Movie)
+response = structured_model.invoke("给出盗梦空间的信息")
+```
+
+
+
+
+
+# 7、Agent
+
+Agent的关键任务：理解用户问题、如何拆解任务、判断是否需要工具、需要哪些工具、输入根据工具结果生成回答&推进任务。
+
+最核心的两个能力：**工具**和**记忆**
+
+![image-20260729071654600](LangChain.assets/image-20260729071654600.png)
+
+
+
+### Agent创建
+
+创建一个agent本质上是LangGraph的**CompiledStateGraph**实例，底层实现是一个图结构。
+
+Agent在创建时，涉及到模型、可调用工具、系统提示词等信息。
+
+```python
+from langchain.agents import create_agent
+agent = create_agent(
+    model: str | BaseChatModel, # 必需：聊天模型
+    tools: List[BaseTool], # 必需：工具列表
+    *,
+    system_prompt: str = "", # 系统提示词
+    middleware: Seguence[AgentMiddleware[StateT_co, ContextT]] = () # 中间件
+    interrupt_before: List[str] = None, # 在某些工具前暂停（人机协作）
+    interrupt_after: List[str] = None, # 在某些工具后暂停
+    debug: bool = False # 调试模式
+    name: str 丨 None = None, # 设置模型名称
+)
+```
+
+![image-20260729072801914](LangChain.assets/image-20260729072801914.png)
+
+### Agent调用
+
+**Agent的输入和输出都是messages字段的消息列表**
+
+“ {"messages": [{"role": "...", "content": "..."}]} ”
+
+```python
+# response 是字典类型
+{
+    "messages": [
+        HumanMessage(...), # 用户问题
+        AIMessage(...), # AI 工具调用
+        ToolMessage(...), # 工具返回结果
+        AIMessage(...) # 最终回答 ← 通常取这个
+    ]
+}
+
+```
+
+LangChain对工具的使用就是一个**ReAct结构**，具备`思考-行动-观察`不断循环的自主工作者。
+
+![image-20260729080511157](LangChain.assets/image-20260729080511157.png)
+
+模型在返回调用工具时，可以一次返回多个工具的调用，AImessage返回多个工具的调用，调用完成后返回大模型请求结果。
+
+```json
+tool_calls=[
+    {
+        'name': 'get_weather',
+        'args': {'city': '杭州'},
+        'id': 'call_w9ARuAgN8iqfG2GR7gv00iBq',
+        'type': 'tool_call'
+    },
+    {'name': 'get_news', 'args': {}, 'id':
+    'call_vOLekRymIme8bWuVQdIew4vu', 'type': 'tool_call'}
+]
+```
+
+**工具选择：**
+
+大模型根据问题的内容、每个工具的描述、自动选择最匹配的工具。
+
+### Agent命名
+
+创建Agent时可以指定名称，返回AIMessage中带有**Name**信息
+
+```python
+agent = create_agent(
+	model=model,
+	name = "chat_assistant"
+)
+
+```
+
+**使用场景**
+
+- 流式输出通过name可以标识是哪个agent的输出
+- 消息身份标记：AIMessage携带Agent的name，使它在保存会话记录、回放执行过程、构建审计日志时能够明确识别消息的生产者
+- 调试和trace可读性方面，可以帮助开发者快速识别是哪个agent
+- 组件化封装：工程实践中，Agent被封装为可复用的能力模块，设置名称方便保持一致的身份标识
+
+### Agent系统提示词
+
+创建agent时可以传入系统提示词，提示词为Agent 提供了任务背景、行为准则和操作指南。AIMessage返回时没有返回SystemMessage
+
+
+
+### Agent的结构化输出
+
+![image-20260731070641284](LangChain.assets/image-20260731070641284.png)
+
+LangChain的create_agent()函数自动处理结构化输出的全过程。用户只需通过 `response_format`参数设置期望的输出模式（Schema）。
+
+ 当模型生成结构化数据时，系统会自动捕获、验证并将结果存储在Agent状态的 `structured_response` 键中。
+
+#### ToolStrategy
+
+当前模型兼容绝大部分模型，
+
+**目的是**在模型生成最终答案时，系统会引导模型间接产生符合要求的结构化数据结果。
+
+ToolStrategy通过 工具调用 （Tool Calling/Function Calling）实现结构化输出，所以LangChain会在 消息列表末尾 追加一条ToolMessage ，让整个链路完整。但实际上没有实际的工具执行，这是一条伪 消息。
+
+受限于模型能力，大模型输出的内容可能并 不符合格式要求 ，ToolStrategy通过其 handle_errors参 数 提供了结构化过程错误处理策略，以下是主要的几种方式及其用途：
+
+- handle_errors=True： LangChain默认方式 ， 捕获所有异常 ，并使用LangChain 内置的、信 息明确的 错误消息模板 提示模型重试，确保最终能得到符合预定格式的有效数据。适用于大多数 希望自动处理错误的通用场景。 
+- handle_errors=False：关闭自动重试机制，任何异常都会 直接抛出 ，会 中断程序 运行。 
+- handle_errors="自定义字符串"：捕获所有异常，但使用开发者 预设的固定字符串 作为错误消 息。适用于需要统一、友好的用户提示，或进行特定业务引导的场景。 
+- handle_errors=ExceptionType：仅 捕获指定类型(如ValueError) 或元组中的异常类型并进行重 试， 其他异常直接抛出 。适用于需要 精准控制 ，只对特定错误进行重试的场景。 
+- handle_errors=callable：灵活性最高的方式，使用开发者 自定义的函数来处理异常 ，可根据不 同的异常类型返回差异化的提示信息。适用于需要复杂、精细化错误处理的场景。
+
+
+
+# 8、中间件
+
+## 介绍
+
+Middleware(中间件)，简单说就是Agent 执行过程中的钩子函数，开发者可以高度定制和控制Agent运行的每一个环节。
+
+**没有中间件时：**
+
+![image-20260731082310884](LangChain.assets/image-20260731082310884.png)
+
+**有中间件后**：
+
+在模型调用前、调用后、在工具调用前、工具调用后
+
+![image-20260731082347135](LangChain.assets/image-20260731082347135.png)
+
+**它们不是 Agent 的核心业务逻辑，但又会影响 Agent 的执行过程。**没有中间件可能遇到的问题:
+
+![image-20260801090659139](LangChain.assets/image-20260801090659139.png)
+
+因此，Agent能够**把这些与业务无关的、但与执行过程强相关的横切逻辑，从Agent主流程中抽离出来，**让Agent主体代码**聚焦业务**，借助中间件，实现‘‘**拦截流程，修改流程，增强流程**’’。
+
+可以自定义中间件，也可以使用LangChain提供的一些常用中间件。
+
+- 成本统计和控制类
+  - Model call limit：限制模型调用次数，防止一次任务反复请求 LLM，导致费用失控 
+  - Tool call limit：限制工具调用次数，避免 Agent 无限试错、死循环调工具
+  - Summarization：在上下文快满时自动总结历史，减少 token 消耗 
+  - Context editing：裁剪上下文、清理工具调用痕迹，本质上也是为了节省上下文成本
+
+适用于：控制成本、配额治理、长会话优化、以及产品控费等
+
+- 稳定性与容错保障类
+  - Model fallback：主模型失败时切换备用模型 
+  - Model retry：模型调用失败后自动重试 
+  - Tool retry：工具调用失败后自动重试
+
+适用于：生产系统中高可用，容灾，鲁棒性建设
+
+- 安全和合规风控
+  - Human-in-the-loop：在关键工具调用前暂停，等人工审批 
+  - PII detection：检测和处理个人敏感信息 
+  - Model call limit / Tool call limit：某种意义上也可归到风控，因为它能防止异常滥用
+
+- 执行能力拓展
+  - Shell tool：给 Agent 持久 shell，会执行命令 
+  - File search：给 Agent 文件搜索能力，能做 
+  - Glob/Grep Filesystem：给 Agent 文件系统读写与长期存储能力
+
+适用于：解决Agent只能聊天，不能真正操作环境
+
+
+
+##  SummarizationMiddleware中间件
+
+作用是：对历史消息进行总结&摘要，达到压缩上下文的效果
+
+原理：在达到触发条件后，调用大模型对历史消息进行摘要，**将摘要结果作为HumanMessage，放在消息列表最开始的位置。用一条摘要消息替换旧消息，保留 `keep` 指定的最近消息，原样继续发送给模型。**
+
+参数1：model —用于摘要的模型 可以是模型名称也可以是模型对象，如果传递的是模型名称，底层会调用 init_chat_model 初始化模 型。 
+
+参数2：trigger —摘要触发条件 是一个列表，每个元素对应一个条件，当 任一条件满足 时，触发摘要。
+
+1. tokens ：token的数量，历史token的累计数量达到该值触发摘要。 
+2. messages ：历史消息数量，历史消息条数达到该值触发摘要。
+3. fraction ：上下文长度比例。历史token的累计数量达到模型的 max_input_tokens*fraction 触 发摘要
+
+参数3：keep —摘要时保留的原始消息 
+
+支持三种条件，但和trigger不同，keep同一时间只接收一种条件。 
+
+1. tokens ：摘要时保留的token数量。 
+2. messages ：摘要时保留的历史消息条数。
+3. fraction ：摘要时保留 max_input_tokens*fraction 个token。
+
+
+
+**与Codex的区别**：
+
+LangChain 是可明确配置的“摘要旧消息 + 保留最近 N 条”；Codex 也是摘要压缩，但保留策略更偏内部的任务连续性管理，不保证固定保留最近几条。
+
+## hook
+
+钩子函数，实现自定义中间件。类似AOP的方法，在某个特定的时机，被框架、系统或者主程序自动调用的拓展函数。
+
+
+
+
+
+
+
+
+
+
+
+
+
