@@ -928,17 +928,237 @@ LangChain 是可明确配置的“摘要旧消息 + 保留最近 N 条”；Code
 
 ## hook
 
-钩子函数，实现自定义中间件。类似AOP的方法，在某个特定的时机，被框架、系统或者主程序自动调用的拓展函数。
+钩子函数，实现自定义中间件。类似AOP的方法，在某个特定的时机，被框架、系统或者主程序自动调用的拓展函数。无论是官方或者自定义中间件都是实现截图中的一个或者多个hook节点实现的。
+
+![image-20260804074945475](LangChain.assets/image-20260804074945475.png)
+
+**Node-style hooks(节点风格钩子)**
+
+在流程的特定节点运行：before_agent、before_model、after_model、after_agent
+
+**Wrap-style hooks(包装风格钩子)**
+
+在模型或者工具调用前后：wrap_model_call (包裹模型调用) wrap_tool_call (包裹工具调用)
 
 
 
+### Node-style hooks
+
+参数：
+
+**state**: 是一个AgentState实例，维护Agent运行过程中的状态，这类状态会随着Agent的运行而发生变化，包括 消息列表 。 
+
+**runtime**: 是一个Runtime实例，维护Agent运行过程中的上下文环境，包括 上下文 、 长期记忆 等。
+
+**返回值**
+
+- None：不修改状态
+- 返回 {"jump_to": "..."}：跳转到其他节点
 
 
 
+#### **函数用法**
+
+装饰器是函数式挂载，把一个hook快速挂载到Agent的某个节点。在中间件方法增加注释，装饰器底层会基于重写的方法构造一个 **AgentMiddleware子类** 的实例，
+
+**装饰器实现原理：**
+
+1. 创建一个AgentMiddleware的子类 
+2. 类名为middleware_name，即创建agent时传递的中间件名称，上述案例中是 after_model_middleware
+3. 这个子类有两个属性 state_schema 和 tools 
+4. 有一个方法： after_model ，逻辑等同于 func(state, runtime) 。
+5. 最后的括号 () 表示实例化子类，返回一个对象
+
+```python
+return type(
+    middleware_name,
+    (AgentMiddleware,),
+    {
+        "state_schema": state_schema or AgentState,
+        "tools": tools or [],
+        "after_model":func(state, runtime),
+    },
+)()
+```
 
 
 
+**示例**
+
+```python
+# 1. 定义 before_model 钩子
+@before_model
+def before_model_middleware(
+    state: AgentState,
+    runtime: Runtime,
+) -> dict[str, Any] | None:
+    state["messages"][-1].content += " -> before_model <- "
+    return None
+
+
+# 2. 定义 after_model 钩子
+@after_model
+def after_model_middleware(
+    state: AgentState,
+    runtime: Runtime,
+) -> dict[str, Any] | None:
+    state["messages"][-1].content += " -> after_model <- "
+    return None
+
+
+# 3. 定义 before_agent 钩子
+@before_agent
+def before_agent_middleware(
+    state: AgentState,
+    runtime: Runtime,
+) -> dict[str, Any] | None:
+    state["messages"][-1].content += " -> before_agent <- "
+    return None
+
+
+# 4. 定义 after_agent 钩子
+@after_agent
+def after_agent_middleware(
+    state: AgentState,
+    runtime: Runtime,
+) -> None:
+    state["messages"][-1].content += " -> after_agent <- "
+    return None
+
+
+agent = create_agent(
+    model=model,
+    middleware=[
+        before_model_middleware,
+        after_model_middleware,
+        before_agent_middleware,
+        after_agent_middleware,
+    ],  # 👈 添加中间件
+)
+```
 
 
 
+#### **继承类实现**
+
+1. 必须继承 AgentMiddleware ← 这个固定 
+2. 方法名固定 ( before_model , after_model ) ← 这个固定 
+3. 类名随意 ← 这个不固定
+
+
+
+```python
+class MyMiddleware(AgentMiddleware):
+    def __init__(self) -> None:
+        super().__init__()
+
+    def before_model(self, state: AgentState, runtime: Runtime) -> dict[str, Any] | None:
+        state["messages"][-1].content += " -> before_model <- "
+        return None
+
+    def after_model(self, state: AgentState, runtime: Runtime) -> dict[str, Any] | None:
+        state["messages"][-1].content += " -> after_model <- "
+        return None
+
+    def before_agent(self, state: AgentState, runtime: Runtime) -> dict[str, Any] | None:
+        state["messages"][-1].content += " -> before_agent <- "
+        return None
+
+    def after_agent(self, state: AgentState, runtime: Runtime) -> None:
+        state["messages"][-1].content += " -> after_agent <- "
+        return None
+
+
+my_middleware = MyMiddleware()
+
+agent = create_agent(
+    model=model,
+    middleware=[my_middleware],
+)
+```
+
+### Wrap-style hooks
+
+装饰器模式：@wrap_model_call
+
+基于类实现：继承AgentMiddleware
+
+和Node-style hook相似。**场景用于：拦截、重试、缓存模型的调用等。**
+
+```python
+class WrapModelCallMiddleware(AgentMiddleware):
+    def wrap_model_call(self, request: ModelRequest, handler: Callable[[ModelRequest], ModelResponse]) -> ModelResponse | None:
+        request.messages[-1].content += " -> wrap_model_call_before <- "
+
+        response = handler(request)
+
+        response.result[0].content += " -> wrap_model_call_after <- "
+        return response
+
+
+agent = create_agent(
+    model=model,
+    middleware=[WrapModelCallMiddleware()],
+)
+```
+
+
+
+装饰器和类的选择 
+
+- 装饰器写法适合把单个 hook 快速挂到 agent 生命周期的某个节点上； 
+- 类写法更适合把多个 hook 组织为一个完整的中间件组件； 
+- 当中间件同时涉及 before_model 、 after_model 等多个钩子时，虽然装饰器工厂也能实现，但 类写法在结构表达、配置归属、可维护性上更好。
+
+
+
+装饰器写法更适合单个 hook、逻辑简单、快速原型的场景； 类写法更适合多个 hook 组合、复杂配置、需要同时提供同步/异步实现、以及更强复用与可测试 性的场景；
+
+
+
+# 9、上下文与记忆
+
+大模型是无状态的，不会记忆上下文，所以需要记忆模块去保存我们和模型对话的上下文信息，在下次请求时把历史信息都输入给模型，让模型输出结果。
+
+记忆(Memory) 模块：核心作用是「 保存上下 文 」和「 提供上下文 」
+
+LangChain提供了三种管理上下文的方法：
+
+![image-20260805084510079](LangChain.assets/image-20260805084510079.png)
+
+动态运行时上下文：就是短期记忆
+
+动态跨会话上下文：长期记忆
+
+- 短期记忆（Short-term memory、会话级记忆、thread-scoped memory）：作用范围是单个 对话线程（Thread）内，一旦开启新对话（更换 thread_id ），记忆即消失。 
+- 长期记忆（Long-term memory，跨会话级记忆 ）：在会话间存储用户特定或应用级数据， 并 在 会话线程间共享 。它可以随时在任何线程中被调用。记忆的范围是任意自定义命名空间，而不 仅仅是单一线程 ID。
+
+在LangChain中：Agent是构建在LangGraph图结构上的，通过state和store构 建记忆系统。使用更简单、功能更统一。 
+
+- state：短期记忆对象，以 会话 为单位组织，包含当前会话的所有消息记录以及自定义信息。 
+- store：长期记忆对象， 跨会话持久化 的数据，通常需要结合向量数据库或外部存储实现。
+
+
+
+## 短期记忆
+
+短期记忆是三者的组合：
+
+State（会话内部状态） + Checkpointer（持久化机制） + Thread ID（会话作用域）
+
+- State ：默认 存储历史消息列表messages ，通过State 管理历史消息 
+- Checkpointer ：负责将State 作为检查点持久化保存，检查点是某个时刻的State 快照 （不是任何时刻都存储，而且到关键节点才会存储）
+- Thread ID ：用于唯一标识State ，LangChain运行时会按照 thread_id 读写State快照
+
+短期记忆的实现：
+
+不必自己手动把所有的请求和返回Message进行组装，state会自己组装。
+
+
+
+1. 第1步：初始化记忆引擎： checkpointer = InMemorySaver() ——创建一个内存级的记忆存储。 注意：InMemorySaver内存中保存，进程结束就丢失数据，适合测试。**生产环境可换成数据库持 久化的 SqliteSaver 、 PostgresSaver 等** 
+2. 第2步：绑定 Agent：在 create_agent 时传入 checkpointer ，让 Agent 具备状态存储能力。 **创建Agent时传入InMemorySaver表示开启短期记忆**
+3. 第3步：设定会话 ID：通过 config = {"configurable": {"thread_id": "1"}} 为每次调用指定线程标识。 同一个 thread_id 共享记忆，不同 thread_id 完全隔离。**会话时传入指定会话ID，即可共享当前会话的记忆，不同会话ID是隔离的**
+
+**latest_state = agent.get_state(config)**可以获取配置中会话的所有短期记忆信息。
 
