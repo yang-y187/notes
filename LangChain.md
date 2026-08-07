@@ -1162,3 +1162,107 @@ State（会话内部状态） + Checkpointer（持久化机制） + Thread ID（
 
 **latest_state = agent.get_state(config)**可以获取配置中会话的所有短期记忆信息。
 
+短期记忆不配置数据库方式:
+
+![image-20260806073154772](LangChain.assets/image-20260806073154772.png)
+
+
+
+
+
+### 短期记忆的存储
+
+配置数据库方式：**增加了数据库的初始化，实际连接能力都是langgraph已支持的。**
+
+**总结**： 
+
+1. InMemorySaver()将状态持久化到内存， 进程结束或重建Saver() 则历史状态丢失 
+1. 基于外部存储介质（如PostgreSQL）的持久化器，其存储的状态不会随进程终止而丢失，只要 不 显式删除历史状态 ，即可通过 thread_id 加载历史状态。
+
+
+
+Checkpointer：可以配置数据库url指定数据库，连接初始化数据库时会建必要的表（首次连接会创建，重复连接不会再创建）
+
+- checkpoints ：这是主表，存每个 thread 在某个时刻的 checkpoint 快照。 
+- checkpoint_blobs ：这张表专门存不适合直接内联进 checkpoints.checkpoint 的较复杂 channel 值。 
+- checkpoint_writes ：这张表存的是中间写入 / pending writes，不是最终完整 checkpoint。 
+- checkpoint_migrations ：这张表不是业务数据表，而是迁移版本表。
+
+
+
+![image-20260806073311348](LangChain.assets/image-20260806073311348.png)
+
+
+
+## 长期记忆
+
+短期记忆都是会话级别的数据，会话之间不共享，长期记忆是用户特定或应用级别的数据，任何会话都可以访问。
+
+长期记忆的存储是 store -> namespace -> key -> value 的四层架构。**类似文件目录的层级结构**
+
+- Store（记忆仓库）
+  - Store是 langgraph.store.base.BaseStore 的子类实例，由全类名可知，store是由LangGraph提 供的。 常用实现类： 
+    - InMemoryStore ：将长期记忆存储在内存，适合测试 PostgresStore ：将长期记忆存储在外部的
+    - PostgreSQL数据库，适合生产环境 开发期可用 InMemoryStore；生产建议数据库后端，如 PostgresStore
+- Namespace（命名空间）
+  - 数据类型是由任意长度的 tuple[str, ...] 表示的 层级路径（tuple元组是不可变的List） 。作用上很像“文件路径 / 文件夹层级”，用于 给长期记忆分组和隔离。数据类型为 字符串元组
+- Key
+  - 是该 namespace 下的唯一标识，单条记忆的唯一键，数据类型为 字符串(str)
+- Value
+  - 是存储的值，数据类型为 字典(dict[str, Any])
+
+
+
+```python
+namespace = ("users", "user_123", "preferences") # 元组类型
+key = "profile" # 字符串类型
+value = { # 字典类型
+"language": "zh-CN",
+"style": "short_direct",
+"likes": ["python", "rag"]
+}
+store.put(namespace, key, value)
+```
+
+
+
+对于长期记忆的store持久化数据，支持put、get、search，可以在Agent执行**流程之外**直接访问长期记忆
+
+**put函数**
+
+![image-20260807085036949](LangChain.assets/image-20260807085036949.png)
+
+**get函数**
+
+![image-20260807085119034](LangChain.assets/image-20260807085119034.png)
+
+**search函数**
+
+![image-20260807085150014](LangChain.assets/image-20260807085150014.png)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
