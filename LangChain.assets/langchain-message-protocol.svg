@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1540" height="900" viewBox="0 0 1540 900" role="img" aria-labelledby="title desc">
+  <title id="title">LangChain消息协议与Prompt转换关系</title>
+  <desc id="desc">左侧展示常见Message角色与工具调用配对，右侧展示ChatPromptTemplate到供应商协议再到AIMessage的双向转换，以及模型无状态的含义。</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f8fbff"/><stop offset="1" stop-color="#f5f3ff"/></linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#0f172a" flood-opacity="0.1"/></filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#64748b"/></marker>
+    <marker id="arrowBlue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#2563eb"/></marker>
+    <style>
+      .title{font:700 31px "Microsoft YaHei","PingFang SC",sans-serif;fill:#0f172a}.subtitle{font:400 16px "Microsoft YaHei","PingFang SC",sans-serif;fill:#475569}
+      .panel{font:700 22px "Microsoft YaHei","PingFang SC",sans-serif;fill:#0f172a}.h{font:700 18px "Microsoft YaHei","PingFang SC",sans-serif;fill:#0f172a}.body{font:400 14px "Microsoft YaHei","PingFang SC",sans-serif;fill:#334155}.small{font:400 12px "Microsoft YaHei","PingFang SC",sans-serif;fill:#64748b}
+      .node{fill:#fff;stroke:#94a3b8;stroke-width:1.6}.ai{fill:#eef2ff;stroke:#818cf8;stroke-width:2}.tool{fill:#ecfeff;stroke:#22d3ee;stroke-width:2}
+    </style>
+  </defs>
+  <rect width="1540" height="900" rx="26" fill="url(#bg)"/>
+  <text x="62" y="62" class="title">Message是协议对象，Prompt是确定性转换</text>
+  <text x="62" y="92" class="subtitle">左侧看消息角色与配对关系；右侧看一次请求如何被组装、适配并还原为标准消息。</text>
+
+  <rect x="48" y="125" width="690" height="715" rx="22" fill="#ffffff" stroke="#cbd5e1"/>
+  <text x="82" y="169" class="panel">一、消息类型与协议职责</text>
+  <rect x="242" y="208" width="300" height="72" rx="15" fill="#e2e8f0" stroke="#64748b" stroke-width="2"/>
+  <text x="392" y="238" text-anchor="middle" class="h">BaseMessage 统一语义</text>
+  <text x="392" y="262" text-anchor="middle" class="small">类型/角色语义 · content · 扩展字段 · id</text>
+
+  <path d="M392 280V322M392 322H137V355M392 322H307V355M392 322H477V355M392 322H647V355" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <rect x="64" y="355" width="146" height="94" rx="13" class="node"/>
+  <text x="137" y="387" text-anchor="middle" class="h">System</text><text x="137" y="414" text-anchor="middle" class="body">任务与行为约束</text><text x="137" y="435" text-anchor="middle" class="small">不是权限系统</text>
+  <rect x="234" y="355" width="146" height="94" rx="13" class="node"/>
+  <text x="307" y="387" text-anchor="middle" class="h">Human</text><text x="307" y="414" text-anchor="middle" class="body">用户输入</text><text x="307" y="435" text-anchor="middle" class="small">文本或多模态</text>
+  <rect x="404" y="355" width="146" height="94" rx="13" class="ai"/>
+  <text x="477" y="387" text-anchor="middle" class="h">AIMessage</text><text x="477" y="414" text-anchor="middle" class="body">模型完整响应</text><text x="477" y="435" text-anchor="middle" class="small">可携带 tool_calls</text>
+  <rect x="574" y="355" width="146" height="94" rx="13" class="tool"/>
+  <text x="647" y="387" text-anchor="middle" class="h">ToolMessage</text><text x="647" y="414" text-anchor="middle" class="body">工具执行结果</text><text x="647" y="435" text-anchor="middle" class="small">回填给模型</text>
+
+  <rect x="404" y="507" width="146" height="78" rx="13" fill="#f5f3ff" stroke="#a78bfa" stroke-width="1.8"/>
+  <text x="477" y="538" text-anchor="middle" class="h">AIMessageChunk</text><text x="477" y="564" text-anchor="middle" class="small">多个Chunk相加后仍是Chunk类型</text>
+  <path d="M477 449V507" stroke="#7c3aed" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="489" y="485" class="small">流式场景产生增量Chunk</text>
+
+  <rect x="366" y="646" width="220" height="94" rx="14" fill="#eef2ff" stroke="#818cf8" stroke-width="2"/>
+  <text x="476" y="678" text-anchor="middle" class="h">tool_calls</text><text x="476" y="705" text-anchor="middle" class="body">name + args + id</text><text x="476" y="727" text-anchor="middle" class="small">只是调用意图，尚未执行</text>
+  <rect x="594" y="646" width="126" height="94" rx="14" class="tool"/>
+  <text x="657" y="678" text-anchor="middle" class="h">结果</text><text x="657" y="705" text-anchor="middle" class="body">ToolMessage</text><text x="657" y="727" text-anchor="middle" class="small">执行后产生</text>
+  <path d="M586 693H594" stroke="#0891b2" stroke-width="3" marker-end="url(#arrow)"/>
+  <text x="590" y="626" text-anchor="middle" class="small">必须用同一个 tool_call_id 配对</text>
+  <path d="M477 449V646" stroke="#818cf8" stroke-width="1.7" stroke-dasharray="6 5"/>
+  <path d="M647 449V646" stroke="#22d3ee" stroke-width="1.7" stroke-dasharray="6 5"/>
+
+  <rect x="772" y="125" width="720" height="715" rx="22" fill="#ffffff" stroke="#cbd5e1"/>
+  <text x="806" y="169" class="panel">二、Prompt到模型响应的双向转换</text>
+
+  <g filter="url(#shadow)">
+    <rect x="820" y="220" width="170" height="92" rx="14" class="node"/>
+    <text x="905" y="252" text-anchor="middle" class="h">输入材料</text><text x="905" y="279" text-anchor="middle" class="body">变量 · 历史消息</text><text x="905" y="300" text-anchor="middle" class="small">MessagesPlaceholder</text>
+    <rect x="1042" y="220" width="180" height="92" rx="14" fill="#eff6ff" stroke="#60a5fa" stroke-width="2"/>
+    <text x="1132" y="252" text-anchor="middle" class="h">ChatPromptTemplate</text><text x="1132" y="279" text-anchor="middle" class="body">绑定变量、组装角色</text><text x="1132" y="300" text-anchor="middle" class="small">不调用模型</text>
+    <rect x="1274" y="220" width="170" height="92" rx="14" fill="#eef2ff" stroke="#818cf8" stroke-width="2"/>
+    <text x="1359" y="252" text-anchor="middle" class="h">PromptValue</text><text x="1359" y="279" text-anchor="middle" class="body">字符串或消息视图</text><text x="1359" y="300" text-anchor="middle" class="small">确定性结果</text>
+  </g>
+  <path d="M990 266H1042M1222 266H1274" stroke="#2563eb" stroke-width="2.4" marker-end="url(#arrowBlue)"/>
+
+  <rect x="861" y="386" width="238" height="84" rx="14" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.7"/>
+  <text x="980" y="417" text-anchor="middle" class="h">标准 Message 列表</text><text x="980" y="445" text-anchor="middle" class="body">System / Human / AI / Tool</text>
+  <rect x="1170" y="386" width="238" height="84" rx="14" fill="#fff7ed" stroke="#fb923c" stroke-width="2"/>
+  <text x="1289" y="417" text-anchor="middle" class="h">Model Adapter</text><text x="1289" y="445" text-anchor="middle" class="body">双向转换供应商请求与响应</text>
+  <path d="M1359 312V350H980V386" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <path d="M1099 428H1170" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <rect x="1032" y="535" width="248" height="96" rx="18" fill="#1d4ed8"/>
+  <text x="1156" y="573" text-anchor="middle" style="font:700 20px 'Microsoft YaHei',sans-serif;fill:white">供应商 Chat Model</text>
+  <text x="1156" y="603" text-anchor="middle" style="font:400 14px 'Microsoft YaHei',sans-serif;fill:#dbeafe">本次请求只读取收到的上下文</text>
+  <path d="M1289 470V508H1156V535" fill="none" stroke="#2563eb" stroke-width="2.5" marker-end="url(#arrowBlue)"/>
+
+  <rect x="855" y="696" width="250" height="88" rx="14" fill="#f5f3ff" stroke="#a78bfa" stroke-width="2"/>
+  <text x="980" y="728" text-anchor="middle" class="h">供应商 Response</text><text x="980" y="756" text-anchor="middle" class="body">文本 · Tool Call · Usage</text>
+  <rect x="1170" y="696" width="250" height="88" rx="14" class="ai"/>
+  <text x="1295" y="728" text-anchor="middle" class="h">AIMessage / Chunk</text><text x="1295" y="756" text-anchor="middle" class="body">Adapter标准化后的结果</text>
+  <path d="M1156 631V665H980V696" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <path d="M1105 740H1170" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="1138" y="714" text-anchor="middle" class="small">Adapter标准化</text>
+
+  <path d="M1420 740H1460V192H905V220" fill="none" stroke="#dc2626" stroke-width="2" stroke-dasharray="8 6" marker-end="url(#arrow)"/>
+  <rect x="1040" y="112" width="400" height="54" rx="12" fill="#fff1f2" stroke="#fda4af"/>
+  <text x="1240" y="145" text-anchor="middle" class="body">多轮“记忆”＝应用保存历史，并在下一次请求中重新发送</text>
+</svg>

@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1040" viewBox="0 0 1600 1040" role="img" aria-labelledby="title desc">
+  <title id="title">Client-side Tool Calling完整调用闭环时序图</title>
+  <desc id="desc">展示客户端工具从调用意图、工具查找、运行时注入、参数校验到真实执行和结果回填的完整闭环；server-side tools不经过该宿主闭环。</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f8fbff"/><stop offset="1" stop-color="#f0fdfa"/></linearGradient>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#475569"/></marker>
+    <marker id="arrowBlue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#2563eb"/></marker>
+    <style>
+      .title{font:700 31px "Microsoft YaHei","PingFang SC",sans-serif;fill:#0f172a}.subtitle{font:400 16px "Microsoft YaHei","PingFang SC",sans-serif;fill:#475569}
+      .actor{font:700 18px "Microsoft YaHei","PingFang SC",sans-serif;fill:#0f172a}.body{font:400 14px "Microsoft YaHei","PingFang SC",sans-serif;fill:#334155}.small{font:400 12px "Microsoft YaHei","PingFang SC",sans-serif;fill:#64748b}.step{font:700 13px "Microsoft YaHei","PingFang SC",sans-serif;fill:#2563eb}
+    </style>
+  </defs>
+  <rect width="1600" height="1040" rx="26" fill="url(#bg)"/>
+  <text x="62" y="62" class="title">Client-side Tool Calling：模型提意图，宿主执行</text>
+  <text x="62" y="92" class="subtitle">外部I/O示例；server-side tools不走此宿主闭环。底部三类失败发生在不同阶段。</text>
+
+  <g>
+    <rect x="70" y="128" width="200" height="62" rx="14" fill="#e2e8f0" stroke="#94a3b8"/><text x="170" y="166" text-anchor="middle" class="actor">用户</text>
+    <rect x="365" y="128" width="230" height="62" rx="14" fill="#dbeafe" stroke="#60a5fa" stroke-width="2"/><text x="480" y="166" text-anchor="middle" class="actor">Agent 宿主</text>
+    <rect x="685" y="128" width="230" height="62" rx="14" fill="#eef2ff" stroke="#818cf8" stroke-width="2"/><text x="800" y="166" text-anchor="middle" class="actor">Chat Model</text>
+    <rect x="1005" y="128" width="230" height="62" rx="14" fill="#ecfeff" stroke="#22d3ee" stroke-width="2"/><text x="1120" y="166" text-anchor="middle" class="actor">Tool / ToolNode</text>
+    <rect x="1325" y="128" width="210" height="62" rx="14" fill="#dcfce7" stroke="#4ade80" stroke-width="2"/><text x="1430" y="166" text-anchor="middle" class="actor">外部系统</text>
+  </g>
+  <g stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="7 7">
+    <line x1="170" y1="190" x2="170" y2="910"/><line x1="480" y1="190" x2="480" y2="910"/><line x1="800" y1="190" x2="800" y2="910"/><line x1="1120" y1="190" x2="1120" y2="910"/><line x1="1430" y1="190" x2="1430" y2="910"/>
+  </g>
+
+  <text x="184" y="230" class="step">1</text><path d="M170 242H480" stroke="#2563eb" stroke-width="2.5" marker-end="url(#arrowBlue)"/><text x="325" y="232" text-anchor="middle" class="body">提交请求</text>
+  <text x="494" y="280" class="step">2</text><path d="M480 292H800" stroke="#2563eb" stroke-width="2.5" marker-end="url(#arrowBlue)"/><text x="640" y="282" text-anchor="middle" class="body">Messages + Tool Schema</text>
+  <text x="786" y="330" class="step">3</text><path d="M800 342H480" stroke="#2563eb" stroke-width="2.5" marker-end="url(#arrowBlue)"/><text x="640" y="332" text-anchor="middle" class="body">AIMessage(tool_calls)</text>
+
+  <rect x="330" y="374" width="980" height="506" rx="20" fill="#ffffff" fill-opacity="0.72" stroke="#60a5fa" stroke-width="2" stroke-dasharray="10 7"/>
+  <rect x="350" y="358" width="258" height="42" rx="10" fill="#2563eb"/>
+  <text x="479" y="385" text-anchor="middle" style="font:700 15px 'Microsoft YaHei',sans-serif;fill:white">循环：模型仍然需要工具</text>
+
+  <rect x="378" y="426" width="204" height="76" rx="13" fill="#eff6ff" stroke="#93c5fd"/>
+  <text x="480" y="455" text-anchor="middle" class="actor">解析与查找</text><text x="480" y="480" text-anchor="middle" class="small">tool_calls → 工具注册表</text>
+  <path d="M480 342V426" stroke="#2563eb" stroke-width="2" marker-end="url(#arrowBlue)"/>
+
+  <rect x="378" y="532" width="204" height="76" rx="13" fill="#fff7ed" stroke="#fdba74"/>
+  <text x="480" y="561" text-anchor="middle" class="actor">运行时注入</text><text x="480" y="586" text-anchor="middle" class="small">ToolRuntime等隐藏参数</text>
+  <path d="M480 502V532" stroke="#2563eb" stroke-width="2" marker-end="url(#arrowBlue)"/>
+
+  <text x="594" y="636" class="step">4</text><path d="M582 648H1120" stroke="#2563eb" stroke-width="2.5" marker-end="url(#arrowBlue)"/><text x="851" y="638" text-anchor="middle" class="body">BaseTool完整Schema校验后调用工具</text>
+  <text x="1134" y="686" class="step">5</text><path d="M1120 698H1430" stroke="#2563eb" stroke-width="2.5" marker-end="url(#arrowBlue)"/><text x="1275" y="688" text-anchor="middle" class="body">服务端鉴权 + 真实读写</text>
+  <path d="M1430 738H1120" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/><text x="1275" y="728" text-anchor="middle" class="body">执行结果 / 业务错误</text>
+  <text x="1106" y="766" class="step">6</text><path d="M1120 778H480" stroke="#2563eb" stroke-width="2.5" marker-end="url(#arrowBlue)"/><text x="800" y="768" text-anchor="middle" class="body">匹配tool_call_id的ToolMessage，或State更新Command</text>
+
+  <text x="494" y="824" class="step">7</text><path d="M480 836H800" stroke="#2563eb" stroke-width="2.5" marker-end="url(#arrowBlue)"/><text x="640" y="826" text-anchor="middle" class="body">AIMessage + 对应ToolMessage</text>
+  <path d="M800 860H480" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/><text x="640" y="850" text-anchor="middle" class="body">下一次Tool Call或最终回答</text>
+  <text x="466" y="888" class="step">8</text><path d="M480 900H170" stroke="#2563eb" stroke-width="2.5" marker-end="url(#arrowBlue)"/><text x="325" y="890" text-anchor="middle" class="body">返回最终回答</text>
+
+  <g>
+    <rect x="78" y="944" width="444" height="70" rx="14" fill="#fff1f2" stroke="#fda4af"/>
+    <text x="100" y="971" class="actor">解析错误</text><text x="100" y="995" class="body">JSON或调用结构无法解析，工具尚未执行</text>
+    <rect x="578" y="944" width="444" height="70" rx="14" fill="#fff7ed" stroke="#fdba74"/>
+    <text x="600" y="971" class="actor">Schema错误</text><text x="600" y="995" class="body">结构可解析，但字段、类型或约束不通过</text>
+    <rect x="1078" y="944" width="444" height="70" rx="14" fill="#fef2f2" stroke="#f87171"/>
+    <text x="1100" y="971" class="actor">执行错误</text><text x="1100" y="995" class="body">已进入真实函数：超时、权限拒绝或业务失败</text>
+  </g>
+</svg>

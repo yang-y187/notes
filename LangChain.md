@@ -30,12 +30,14 @@
 
 ![image-20260718105944642](LangChain.assets/image-20260718105944642.png)
 
+> 本文按当前实测环境核对：`langchain==1.2.12`、`langchain-core==1.4.9`、`langgraph==1.1.10`、`langgraph-prebuilt==1.0.13`、`langsmith==0.10.9`、`langchain-openai==1.1.11`。
+
 ## 核心模块
 
-- **angchain-core** ：官方推荐的核心API。比如 Runnable, BaseMessage等 
+- **langchain-core** ：官方推荐的核心API。比如 Runnable, BaseMessage等
 - **langchain-classic** ：冗余代码移或不推荐使用的经典API移到此。比如0.x中常用而1.x移除的API都 在这里。 
-- **langchain-community** ：第三方集成，比如：合作伙伴包 langchain-openai，langchainanthropic等，按需安装、避免臃肿。
-- **langgraph** ：深度整合 LangGraph 1.0，协调多个Chain，Agent，Tools完成更复杂的任务，并 且还支持循环调用，是langchain图形化的增强版
+- **langchain-community** ：主要提供社区集成；`langchain-openai`、`langchain-anthropic`等合作伙伴包需按需安装。
+- **langgraph** ：深度整合 LangGraph，协调多个Chain、Agent、Tools完成更复杂的有状态、分支和循环任务。
 
 
 
@@ -113,7 +115,7 @@
 
 2、文件切割：没有固定的格式 
 
-3、在 RAG 应用中，随着文档数量增加，召回准确率会下降，引入reranker（重排器）可对初步 召回的较多 chunk（如 top 20 或 top 50）进行精排，提高召回准确率，防止LLM 处理无关信 息，减少时间和成本。 
+3、在 RAG 应用中，reranker（重排器）可对初步召回的较多chunk（如top 20或top 50）进行精排，提高候选排序质量，但不能找回召回阶段遗漏的文档，而且会增加延迟和成本。
 
 此外，与基于基本矢量搜索的 RAG 相比，reranker增强型 RAG 的成本更高，但与仅依靠LLM 生 成答案相比，它的成本低些
 
@@ -148,8 +150,8 @@
 
 - invoke() ：阻塞式，一次性返回完整结果问答、批处理任务、无需实时反馈的场景。 
 - ainvoke() ：非阻塞式，提高系统吞吐量高并发Web应用、IO密集型任务。 
-- stream() ：流式输出，实时返回每个token聊天机器人、长文本生成、需要提升用户体验的交互 应用。 
-- asteam() ：非阻塞式，提高系统吞吐量高并发Web应用、IO密集型任务。 
+- stream() ：流式输出，实时返回Chunk，适合聊天机器人、长文本生成等交互应用。
+- astream() ：异步流式输出，适合高并发Web应用、IO密集型任务。
 - batch() ：批量处理多个输入高并发场景，需要同时处理大量请求。 
 - abatch() ：非阻塞式，提高系统吞吐量高并发Web应用、IO密集型任务。
 
@@ -271,7 +273,7 @@ AIMessage(
 
     # --- 工具调用信息 ---
     tool_calls=[],           # 正常触发的外部工具调用列表
-    invalid_tool_calls=[],   # 触发失败或格式错误的工具调用
+    invalid_tool_calls=[],   # 无法正确解析的工具调用
 
     # --- 统一消耗元数据（LangChain 标准化后的格式） ---
     usage_metadata={
@@ -295,7 +297,7 @@ AIMessage(
 ##### 1. 核心内容与基本信息
 
 - `content`：模型生成的文本回答，这是最关心的核心输出。
-- `id`：本次运行在 LangChain 内部生成的唯一标识（Run ID）。
+- `id`：本条消息的唯一标识（Message ID）。
 - `additional_kwargs`：包含特定供应商的额外参数。
   - `refusal`：如果模型拒绝回答（涉及敏感政策），此处会显示拒绝原因。
 
@@ -334,9 +336,9 @@ AIMessage(
 ##### 5. 工具调用信息
 
 - `tool_calls`：结构化工具调用列表。如果模型决定调用某个 Python 函数或搜索工具，参数会记录在这里。
-- `invalid_tool_calls`：格式错误或未成功执行的工具调用尝试。
+- `invalid_tool_calls`：格式错误、无法正确解析的工具调用。
 
-### steam() 流式调用
+### stream() 流式调用
 
 invoke 和 stream 有什么区别？ 
 
@@ -344,11 +346,11 @@ invoke 和 stream 有什么区别？
 
 **stream()** ：流式调用，实时返回响应片段。调用后，返回一个 迭代器(iterator) ，可以通过循环 来实时处理每一个新生成的chunk内容块
 
-**优点**： 响应速度更快 — 用户不必等待完整输出 交互体验更流畅 — 尤其在长文本或复杂推理场景下 可实时展示模型思考过程
+**优点**：响应速度更快，用户不必等待完整输出；可实时展示模型公开返回的内容，但不会自动暴露私有思维过程。
 
 ### batch()批量调用
 
-允许你一次性 发送一组请求 （含多条独立请求），模型会在后台 并行处理 ，然后返回 所 有结果的列表 。返回结果是乱序的
+允许你一次性发送一组独立请求并发处理。`batch()`默认按输入顺序返回；需要按完成顺序消费时使用`batch_as_completed()`。
 
 
 
@@ -488,7 +490,7 @@ prompt_template.invoke({"msgs": [HumanMessage(content="hi!")]})
 
 # 5、Tools
 
-tools工具是能够支持模型与外部交互的关键能力。注意：**MCP只是模型调用的一种方式**
+tools工具是能够支持模型与外部交互的关键能力。注意：**MCP是连接模型应用与外部能力的标准协议，不是模型调用方式。**
 
 ![image-20260724215800133](LangChain.assets/image-20260724215800133.png)
 
@@ -561,10 +563,10 @@ def get_weather(dt: str, city: str="北京"):
     """
     天气查询工具
     Args:
-    dt: 日期
-    city: 城市名称
+        dt: 日期
+        city: 城市名称
     """
-	return f"{city}天气晴朗"
+    return f"{city}天气晴朗"
 ```
 
 ### 工具要求
@@ -575,7 +577,7 @@ def get_weather(dt: str, city: str="北京"):
    1. 工具内部处理，避免无效参数处理
    2. Agent级充实，可以在描述中写明，如果调用失败，可以尝试尝试方法解决问题
    3.  配置重试规则：如果失败，最多尝试 3 次（即第 1 次正常调用 + 2 次重试） @retry(stop=stop_after_attempt(3))
-4. 结果返回字符串
+4. 结果可返回字符串、字典、artifact或`Command`等协议支持的类型
 5. 选择同步vs异步
    - **同步工具**：简单场景，CPU密集型任务
    - **异步工具**：IO密集型
@@ -610,11 +612,11 @@ LangChain的结构化输出（Structured Output） 指的是：模型的输出�
 
 ## Pydantic
 
-通过在运行时强制执行类型提示，确保数据的正确性和一致性，是**生产场景首选**。
+通过运行时校验保证结构、类型及显式约束，但不能保证内容或事实正确，是**生产场景首选**。
 
 **需要满足的几个要素**：
 
--  所有结构化输出的数据模型都必须继承 BaseModel 
+- 使用Pydantic定义结构化输出时，数据模型需要继承 BaseModel
 - 使用 类型提示 。Pydantic 支持丰富的字段类型：str 、int、float、List[xxx]、Optional[xxx]等 
 - 使用 Field() 添加字段默认值和描述，帮助 LLM 理解字段含义
 
@@ -624,10 +626,10 @@ LangChain的结构化输出（Structured Output） 指的是：模型的输出�
 
 ```python
 class Person(BaseModel):
-"""人物信息"""
-name: str = Field(description="姓名")
-age: int = Field(description="年龄")
-occupation: str = Field(description="职业")
+    """人物信息"""
+    name: str = Field(description="姓名")
+    age: int = Field(description="年龄")
+    occupation: str = Field(description="职业")
 
 # 创建结构化输出的 LLM
 structured_llm = model.with_structured_output(Person)
@@ -655,8 +657,8 @@ print(result.occupation) # "软件工程师"
 
 1. 定义Pydantic结构
 2. 协议转换：定义数据结构后，通过Pydantic的底层方法，将对象转换为标准的JSON Schema。
-3. 模型交互与强约束：将该JSON Schema包装到大模型的输入，**JSON的处理作为tool传给LLM**，LLM有参数字段支持**语法采样约束**，输出时严格按JSON Schema的语法进行
-4. 自动解析与验证：LLM返回JSON的字符串后，将解析，验证，并返回实际的对象。
+3. 模型交互与约束：根据模型能力选择原生结构化输出、Tool Calling或其他JSON输出方式；约束强度由供应商和策略决定。
+4. 解析与验证：对模型返回结果进行解析和Schema校验，失败时按策略报错或重试。
 
 ![image-20260725201430773](LangChain.assets/image-20260725201430773.png)
 
@@ -664,7 +666,7 @@ print(result.occupation) # "软件工程师"
 
 **即带有类型声明的字典结构**，适合快速定义字典结构且无需Pydantic重量级的场景。
 
-**TypedDict 主要是类型声明，不是运行时强校验器。**输出结果与目标类型不一致也不会抛异常
+**TypedDict主要是类型声明，不是运行时强校验器。**是否执行运行时校验取决于Provider和具体执行路径。
 
 
 
@@ -690,14 +692,14 @@ class Movie(TypedDict):
 
 ## JSON  Schema
 
-交互以JSON Schema规范拼接JSON字符串，比较繁琐，而且缺少校验机制，不推荐
+JSON Schema本身具有校验语义；直接使用原始Schema字典较繁琐，是否完整校验取决于Provider和解析路径。
 
 ## @dataclass
 
 @dataclass是Python标准库提供的类装饰器，自动生成常用方法，近似于手写这些方法的普通类。
 
 - `__init__`
-- `_repr__` 
+- `__repr__`
 - `__eq__`
 
 ```python
@@ -738,15 +740,14 @@ Agent在创建时，涉及到模型、可调用工具、系统提示词等信息
 ```python
 from langchain.agents import create_agent
 agent = create_agent(
-    model: str | BaseChatModel, # 必需：聊天模型
-    tools: List[BaseTool], # 必需：工具列表
-    *,
-    system_prompt: str = "", # 系统提示词
-    middleware: Seguence[AgentMiddleware[StateT_co, ContextT]] = () # 中间件
-    interrupt_before: List[str] = None, # 在某些工具前暂停（人机协作）
-    interrupt_after: List[str] = None, # 在某些工具后暂停
-    debug: bool = False # 调试模式
-    name: str 丨 None = None, # 设置模型名称
+    model=model,                  # 聊天模型
+    tools=tools,                  # 工具列表
+    system_prompt="你是一个可靠的助手",
+    middleware=[],
+    interrupt_before=None,
+    interrupt_after=None,
+    debug=False,
+    name="assistant",
 )
 ```
 
@@ -771,7 +772,7 @@ agent = create_agent(
 
 ```
 
-LangChain对工具的使用就是一个**ReAct结构**，具备`思考-行动-观察`不断循环的自主工作者。
+LangChain对工具的使用可以形成**ReAct结构**，即`决策-行动-观察`的控制循环。
 
 ![image-20260729080511157](LangChain.assets/image-20260729080511157.png)
 
@@ -837,7 +838,7 @@ ToolStrategy通过 工具调用 （Tool Calling/Function Calling）实现结构�
 
 受限于模型能力，大模型输出的内容可能并 不符合格式要求 ，ToolStrategy通过其 handle_errors参 数 提供了结构化过程错误处理策略，以下是主要的几种方式及其用途：
 
-- handle_errors=True： LangChain默认方式 ， 捕获所有异常 ，并使用LangChain 内置的、信 息明确的 错误消息模板 提示模型重试，确保最终能得到符合预定格式的有效数据。适用于大多数 希望自动处理错误的通用场景。 
+- handle_errors=True：LangChain默认方式，捕获相关异常，并使用内置错误消息提示模型重试；重试仍可能失败，不能确保最终得到有效数据。
 - handle_errors=False：关闭自动重试机制，任何异常都会 直接抛出 ，会 中断程序 运行。 
 - handle_errors="自定义字符串"：捕获所有异常，但使用开发者 预设的固定字符串 作为错误消 息。适用于需要统一、友好的用户提示，或进行特定业务引导的场景。 
 - handle_errors=ExceptionType：仅 捕获指定类型(如ValueError) 或元组中的异常类型并进行重 试， 其他异常直接抛出 。适用于需要 精准控制 ，只对特定错误进行重试的场景。 
@@ -970,20 +971,21 @@ LangChain 是可明确配置的“摘要旧消息 + 保留最近 N 条”；Code
 5. 最后的括号 () 表示实例化子类，返回一个对象
 
 ```python
-return type(
+GeneratedMiddleware = type(
     middleware_name,
     (AgentMiddleware,),
     {
         "state_schema": state_schema or AgentState,
         "tools": tools or [],
-        "after_model":func(state, runtime),
+        "after_model": func,
     },
-)()
+)
+middleware = GeneratedMiddleware()
 ```
 
 
 
-**示例**
+**反例（仅用于观察Hook顺序）**
 
 ```python
 # 1. 定义 before_model 钩子
@@ -1036,6 +1038,8 @@ agent = create_agent(
     ],  # 👈 添加中间件
 )
 ```
+
+> 生产代码不要原地修改State或Message；需要持久更新时应返回State Update，并由Reducer合并。
 
 
 
@@ -1126,12 +1130,12 @@ LangChain提供了三种管理上下文的方法：
 
 ![image-20260805084510079](LangChain.assets/image-20260805084510079.png)
 
-动态运行时上下文：就是短期记忆
+动态运行时上下文：本次运行所需且通常不变的依赖信息，不等于短期记忆
 
 动态跨会话上下文：长期记忆
 
-- 短期记忆（Short-term memory、会话级记忆、thread-scoped memory）：作用范围是单个 对话线程（Thread）内，一旦开启新对话（更换 thread_id ），记忆即消失。 
-- 长期记忆（Long-term memory，跨会话级记忆 ）：在会话间存储用户特定或应用级数据， 并 在 会话线程间共享 。它可以随时在任何线程中被调用。记忆的范围是任意自定义命名空间，而不 仅仅是单一线程 ID。
+- 短期记忆（Short-term memory、会话级记忆、thread-scoped memory）：作用范围是单个对话线程（Thread）内；更换`thread_id`后不会自动加载旧线程记忆，但旧Checkpoint并未因此删除。
+- 长期记忆（Long-term memory，跨会话级记忆）：在会话间存储用户特定或应用级数据，并可按namespace、身份和权限在多个线程间共享。
 
 在LangChain中：Agent是构建在LangGraph图结构上的，通过state和store构 建记忆系统。使用更简单、功能更统一。 
 
@@ -1148,7 +1152,7 @@ State（会话内部状态） + Checkpointer（持久化机制） + Thread ID（
 
 - State ：默认 存储历史消息列表messages ，通过State 管理历史消息 
 - Checkpointer ：负责将State 作为检查点持久化保存，检查点是某个时刻的State 快照 （不是任何时刻都存储，而且到关键节点才会存储）
-- Thread ID ：用于唯一标识State ，LangChain运行时会按照 thread_id 读写State快照
+- Thread ID：标识一条执行线程或时间线，运行时会按照`thread_id`读写其Checkpoint；具体State快照还由`checkpoint_id`区分
 
 短期记忆的实现：
 
@@ -1208,7 +1212,7 @@ Checkpointer：可以配置数据库url指定数据库，连接初始化数据�
 
 
 
-短期记忆都是会话级别的数据，会话之间不共享，长期记忆是用户特定或应用级别的数据，任何会话都可以访问。
+短期记忆是会话级数据，长期记忆可跨Thread共享，但仍受namespace、身份和权限控制。
 
 长期记忆的存储是 store -> namespace -> key -> value 的四层架构。**类似文件目录的层级结构**
 
@@ -1354,70 +1358,896 @@ RAG（Retrieval-Augmented Generation，检索增强生成）是一种结合信�
 延伸思考：**只要对图片、视频、商品等素材进行向量化**，就可以实现以图搜图、视频相关推荐、相似宝贝推荐等功能。
 
 
+# 第一章补充：LangChain整体定位与分层原理
 
+LangChain不是大模型本身，而是构建LLM应用的工程框架。
 
+它解决的重点不是“如何发送一次HTTP请求”，而是多个异构组件如何使用统一协议协作。
 
+## 定位：LangChain解决什么问题
 
+不同模型、工具、检索器和数据库拥有不同的输入输出格式，直接组合会产生大量适配代码。
 
+LangChain通过标准对象和统一接口降低组件之间的耦合：
 
+- Message统一表示系统指令、用户输入、模型响应和工具结果。
+- Prompt负责变量填充和消息组装。
+- Chat Model Adapter负责转换不同供应商的请求和响应。
+- Tool统一描述可执行能力及其参数Schema。
+- Retriever统一接收Query并返回Document列表。
+- Runnable统一组件的同步、异步、批量和流式调用方式。
 
+**本质：** LangChain在具有概率性的LLM外面，增加了一层相对确定的协议转换和执行控制。
 
+模型负责语义理解、内容生成和下一步决策；框架负责数据转换、流程编排、状态管理、错误处理和Tracing。
 
+## 分层：各组件如何协作
 
+LangChain生态可以分为以下几层：
 
+1. `langchain-core` 定义Message、Prompt、Runnable、Tool和Callback等基础协议。
+2. `langchain-openai` 等供应商包把具体模型API适配为LangChain统一接口。
+3. `langchain` 提供Agent、Middleware和模型初始化等高层应用抽象。
+4. `langgraph` 提供State、Node、Edge、Reducer、Checkpoint和Interrupt等执行能力。
+5. `langsmith` 在启用Tracing后接收Run和Trace，并提供评估、实验和生产监控。
 
+`langchain-community` 主要承载社区维护的集成，不等同于所有独立供应商包。
 
+LangChain中的 `create_agent()` 最终会构造并编译一张LangGraph状态图，因此Agent具备循环和状态更新能力；配置Checkpointer后可持久化。
 
+Deep Agents建立在LangChain和LangGraph之上，通过规划、文件系统、Skills和Subagent等能力处理更复杂的长任务。
 
+它们之间的依赖和协作关系如下：
 
+![LangChain生态分层与协作关系](LangChain.assets/langchain-ecosystem-architecture.png)
 
+**总结：** LangChain负责应用抽象，LangGraph负责有状态执行，LangSmith负责观察和评估，三者解决的问题不同。
 
+一次普通模型请求通常沿着“Prompt或Message → Model Adapter → 供应商模型 → AIMessage → Parser或Tool路由”流转；固定RAG通常先由Retriever取回文档，再把文档放入Model Context。需要分支、循环和恢复时，再由LangGraph根据State继续调度。启用Tracing后，各层调用会形成父子Run并上报。
 
+## 边界与取舍
 
+LangChain能够统一接口，但不能让能力不同的模型完全等价。
 
+它不会自动保证：
 
+- 模型生成的事实一定正确。
+- 模型一定选择正确Tool。
+- RAG一定召回相关文档。
+- 外部写操作自动具备幂等性。
+- Prompt能够代替服务端权限校验。
+- 应用自动拥有合理的业务评估标准。
 
+技术选型应按控制需求逐步增加复杂度：
 
+- 单次模型调用使用供应商SDK通常更直接。
+- 固定的多组件管道适合Runnable和LCEL。
+- 需要状态、分支、循环和恢复时适合LangGraph Workflow。
+- 当行动或工具选择需要模型结合上下文动态判断，并且可能形成循环时，适合使用Agent。
 
+**面试重点：** 需要能够说明LangChain的核心价值是“统一协议与执行编排”，并准确区分LangChain、LangGraph、LangSmith和Deep Agents的职责，不能把LangGraph理解成图形化界面，也不能把框架能力等同于模型能力。
 
+# 第二章补充：模型适配与Runnable执行原理
 
+模型调用表面上是发送Prompt并接收回答，底层还包含输入标准化、供应商协议转换、响应归一化和配置传播。
 
+## 模型适配：统一输入与输出
 
+LangChain允许Chat Model接收字符串、由字典、元组或Message对象组成的消息序列，以及PromptValue。
 
+这些输入最终会被统一成消息列表，再由具体模型Adapter转换成供应商协议。
 
+一次调用的底层流程：
 
+1. 输入被标准化为Message列表，常见类型包括System、Human、AI和Tool Message。
+2. Adapter读取模型参数、Tool Schema和Response Format。
+3. Adapter构造供应商需要的JSON请求。
+4. 供应商返回文本、工具调用、Token统计和停止原因。
+5. Adapter将结果转换为AIMessage或AIMessageChunk。
+6. 公共字段被标准化，供应商特有信息保留在扩展字段中。
 
+`usage_metadata` 是LangChain尽量统一后的Token统计。
 
+`response_metadata` 保存供应商返回的模型名称、停止原因等信息，其字段结构不保证完全一致。
 
+**本质：** 统一Chat Model接口解决的是调用契约一致，不是抹平所有模型的能力差异。
 
+## Runnable与LCEL
 
+Runnable是LangChain组件共同遵守的统一执行协议。
 
+Prompt、Model、Parser和Retriever都可以作为Runnable参与组合。
 
+Runnable统一提供：
 
+- 单次同步和异步调用。
+- 批量调用。
+- 流式调用。
+- 配置和Callback传播。
+- Retry、Fallback和Tracing入口。
+- 串行、并行和分支组合。
 
+LCEL使用 `|` 等Python语法描述Runnable之间的关系。
 
+`prompt | model | parser` 的本质是构造RunnableSequence，而不是立即执行三次普通函数调用。
 
+执行时，上一个Runnable的输出会成为下一个Runnable的输入，因此前后组件的数据结构必须兼容。
 
+字典在LCEL组合中可以被转换为RunnableParallel，使多个分支接收同一份输入并并发执行。
 
+父Runnable调用子Runnable时，RunnableConfig中的Tags、Metadata和Callbacks会继续传播；启用Tracing后，LangSmith才能据此还原并上报完整调用树。
 
+Runnable的组合关系以及四类执行入口优化的目标如下：
 
+![Runnable与LCEL执行模式](LangChain.assets/runnable-execution-modes.png)
 
+## 同步、异步、批量与流式
 
+`invoke()` 会阻塞当前调用，直到Runnable返回完整结果。
 
+组件有原生异步实现时，`ainvoke()`会在等待IO时让出事件循环；只有同步实现时，Runnable默认通常把`invoke()`放入线程池。两者主要提高并发吞吐量，不代表单次模型推理更快。
 
+`batch()` 和 `abatch()` 用于处理多个互相独立的输入。
 
+Runnable默认的`batch()`在线程池并发调用`invoke()`，`abatch()`并发调用`ainvoke()`；子类也可以覆写实现以利用底层批量能力。Chat Model的`batch()`通常是客户端并发，不能等同于供应商的离线Batch API。
 
-​	
+并发数量需要通过 `max_concurrency` 等机制控制，过高会触发限流、连接池耗尽和内存上涨。
 
+流式调用通常经过以下过程：
 
+1. 供应商通过SSE等协议发送增量数据。
+2. Adapter把供应商增量转换为AIMessageChunk。
+3. 下游Runnable逐步接收并转换Chunk。
+4. 应用把多个Chunk聚合成内容完整的AIMessageChunk，再按需消费。
 
+流式输出主要降低首字等待时间TTFT，总生成时间不一定更短。
 
+如果中间Runnable必须等待完整输入，流式传播会在这一层被阻塞。
 
+工具调用参数也可能分多个Chunk到达，JSON尚未完整时不能立即校验和执行。
 
+Agent或LangGraph图级流式还需要区分事件语义：
 
+- `values`返回每个Step后的完整State，`updates`只返回本轮Node产生的局部更新。
+- `messages`返回图内模型调用的消息Chunk与Metadata，`custom`由Node或Tool通过Stream Writer主动发送业务进度。
+- `checkpoints`、`tasks`和`debug`更适合恢复诊断、任务生命周期和调试，不等同于给用户展示的文本流。
+- 同时订阅多个`stream_mode`时，输出会带Mode；`subgraphs=True`还会携带子图Namespace。
+- 当前`CompiledStateGraph.stream/astream`的输出封装支持`v1/v2`；其继承的`astream_events()`虽在`langchain-core==1.4.9`签名中接受`v3`，但当前`langgraph==1.1.10`尚未实现，实际应使用`v1/v2`。
 
+## 边界与勘误
 
+不同调用方式共享Runnable协议，但底层实现仍然取决于具体组件和供应商。
 
+**勘误：**
 
+- 正确的异步流式方法是 `astream()`，不是 `asteam()`。
+- Chunk是增量片段，不保证一个Chunk恰好对应一个Token。
+- 流式输出不会自动暴露模型未公开的私有思维过程。
+- `batch()` 默认按照输入顺序返回结果；按完成顺序消费应使用 `batch_as_completed()`。
+- `AIMessage.id` 是消息标识，不等于Runnable或LangSmith的Run ID。
 
+Runnable统一了调用方式，但不会自动解决输入输出类型不匹配、供应商限流或模型能力不兼容。
 
+异步适合IO密集型并发；CPU密集型计算不会仅因改成 `async` 自动变快。
+
+**面试重点：** 需要掌握Adapter的双向协议转换、Runnable与LCEL的组合本质，以及同步、异步、批量和流式调用分别优化什么；尤其要区分Chunk与Token、Message ID与Run ID，并说明异步提高的是IO吞吐量而不是模型推理速度。
+
+# 第三章补充：LangSmith可观测与评估原理
+
+LLM应用具有概率性，只查看最终答案无法判断错误发生在Prompt、Model、Tool、Retriever还是Agent路由。
+
+LangSmith通过Tracing记录执行过程，再通过Evaluation衡量应用质量。启用自动Tracing后，框架调用会自动上报；显式使用LangSmith SDK写入Run或执行Evaluation不依赖自动Tracing开关。
+
+## Run、Trace与Thread
+
+Run表示一次独立的工作单元，例如：
+
+- 一次模型调用。
+- 一次Tool执行。
+- 一次Retriever检索。
+- 一次Graph Node运行。
+- 一次自定义函数调用。
+
+Run通常记录输入、输出、开始时间、结束时间、错误、Tags和Metadata。
+
+Trace表示一次完整操作产生的Run树。
+
+根Run代表整个请求，模型、工具、检索器等子调用形成子Run。
+
+Thread用于把多轮会话中的多个Trace关联起来。
+
+一轮用户请求通常对应一条Trace，多轮Trace通过相同的 `thread_id`、`session_id` 或 `conversation_id` 组成Thread。
+
+Project是一组相关Trace的容器，通常按照应用、服务或环境划分。
+
+**本质：** Run是执行步骤，Trace是单次操作，Thread是多轮会话，Project是Trace集合。
+
+Project和Thread从不同维度组织Trace，Trace内部再由具有父子关系的Run组成：
+
+![LangSmith中Project、Thread、Trace和Run的关系](LangChain.assets/langsmith-object-model.png)
+
+## 自动追踪的底层机制
+
+Runnable调用子Runnable时会传播父级追踪上下文。
+
+启用Tracing后的自动追踪过程可以概括为：
+
+1. 根Runnable开始执行并创建根Run。
+2. 子Runnable继承父Run信息、Tags、Metadata和Callbacks。
+3. Model、Tool和Retriever分别产生子Run。
+4. Callback记录开始、结束、流式事件和异常。
+5. LangSmith Client把这些事件组织成Run树并上报。
+6. Trace完成后可以在LangSmith中查看完整调用链路。
+
+不属于LangChain的普通Python函数，也可以通过 `@traceable` 或Trace Context手动加入调用树。
+
+未启用自动Tracing时，应用仍可正常执行，框架调用不会自动上报；显式SDK写入仍然可以产生Run和Trace。
+
+Tracing用于观察执行，不应该改变Agent的业务结果。
+
+生产环境需要控制Trace中的敏感数据，Prompt、Tool参数、检索文档和模型输出都可能包含隐私信息。
+
+## 从Tracing到Evaluation
+
+Tracing回答“实际发生了什么”，Evaluation回答“结果是否足够好”。
+
+LangSmith评估包含几个核心对象：
+
+- Dataset：一组相对稳定的测试样本。
+- Example：Dataset中的单条输入和可选参考结果。
+- Target：真正被测试的Runnable、Retriever、Agent或完整应用。
+- Evaluator：根据规则对输出或Trace评分。
+- Experiment：某个应用版本在整个Dataset上的运行与评分集合。
+
+Offline Evaluation在发布前对固定Dataset运行，适合Prompt比较、模型升级、Retriever调整和回归测试。
+
+Online Evaluation在已经上报的生产Trace或Thread上运行，适合安全检测、格式校验、延迟监控和无参考答案的质量评估。
+
+完整改进闭环：
+
+1. 生产Tracing发现失败样本。
+2. 人工确认错误发生的层次和业务原因。
+3. 失败样本加入离线Dataset。
+4. 修改Prompt、Model、Tool或Retriever。
+5. 运行Experiment比较新旧版本。
+6. 通过质量门禁后重新发布并继续监控。
+
+确定性条件应优先使用代码Evaluator，例如JSON能否解析、权限是否正确、Tool参数是否合法。
+
+帮助性、忠实度和语义正确性可以使用人工评估或LLM-as-a-Judge，但Judge本身也需要校准。
+
+Agent评估不能只看最终答案，还应分别检查：
+
+- Tool选择是否正确、参数是否合法、是否出现无效或重复调用。
+- 执行轨迹是否到达目标、是否绕路，以及高风险步骤是否经过审批。
+- 延迟、Token、工具次数和失败重试成本是否满足预算。
+- 同一输入多次运行的成功率与方差；单次正确不能代表Agent稳定。
+
+## 与Checkpoint和Memory的边界
+
+Trace、Checkpoint和Memory保存的内容不同：
+
+- Trace记录自动Tracing或显式SDK上报的执行过程，用于调试、审计和评估。
+- Checkpoint保存当前State和下一步位置，用于暂停、恢复和重放。
+- Store Memory保存跨Thread需要长期保留的数据。
+- Dataset保存稳定测试样本，用于版本比较和回归评估。
+
+LangSmith中的Thread主要负责关联多轮Trace，不会自动保存LangGraph执行状态。
+
+LangGraph的 `thread_id` 可以同时作为Tracing Metadata，但二者共享标识不代表共享存储职责。
+
+删除Trace不会自动删除Checkpoint；保存Trace也不会让Agent自动记住其中内容。
+
+长期记忆只有被应用主动读取并注入模型上下文后，才会影响后续回答。
+
+**总结：** 可观测性、执行持久化和长期记忆分别服务诊断、恢复和跨会话信息管理，不能互相替代。
+
+**面试重点：** 需要准确区分Run、Trace、Thread和Project，说明RunnableConfig与Callback如何在启用Tracing时形成并上报父子调用树，并能够解释Tracing、Checkpoint、Store Memory和Dataset各自保存什么，以及Offline Evaluation如何把线上失败沉淀成可重复验证的回归样本。
+
+# 第四章补充：消息协议、模型无状态与Prompt转换原理
+
+Message是模型上下文的基本数据单元，也是LangChain屏蔽供应商协议差异的核心抽象。
+
+**本质：** LangChain统一消息语义和调用契约，具体请求格式仍由模型Adapter翻译。
+
+## Message统一协议与模型适配
+
+常见Message通过Role表达不同语义：
+
+- `SystemMessage`描述任务、行为和全局约束。
+- `HumanMessage`表示用户输入。
+- `AIMessage`表示模型响应，也可以携带Tool Call。
+- `ToolMessage`表示某次工具调用的执行结果。
+
+Role只是模型协议标记，不是权限系统。SystemMessage不能代替后端鉴权、工具白名单和数据访问控制。
+
+`content`是宽松的内容载荷，可以保存字符串、供应商原生块或LangChain标准块；`content_blocks`提供标准化、类型化访问视图。默认情况下它可以从`content`惰性转换，使用`output_version="v1"`时标准块也可以直接写入`content`。
+
+AIMessage中几个容易混淆的字段：
+
+- `tool_calls`是成功解析的标准化工具调用。
+- `usage_metadata`是LangChain尽量统一后的Token统计。
+- `response_metadata`保存模型名称、停止原因等供应商响应信息。
+- `additional_kwargs`是供应商特有字段的扩展出口。
+- `id`是Message ID，不等同于Runnable Run ID。
+
+供应商Response经过Adapter后会被标准化为AIMessage；流式场景产生AIMessageChunk。统一消息协议降低了切换模型的成本，但不会让不同模型的工具、多模态和结构化输出能力完全等价。
+
+消息角色、Tool Call配对以及Prompt双向转换可以放在同一张图中理解：
+
+![LangChain消息协议与Prompt转换关系](LangChain.assets/langchain-message-protocol.png)
+
+## 模型无状态
+
+Chat Model通常不保存应用中的Python会话对象。模型理解多轮对话，是因为应用在下一次请求中恢复并重新发送了历史消息。
+
+供应商的Conversation ID或Response ID只是特定服务端上下文机制，不能推导为所有LangChain模型都自动有记忆。
+
+历史Message、工具Schema、RAG文档等内容都由应用重新组织并发送给模型，它们共同占用上下文窗口。具体的裁剪、摘要和长期记忆策略统一放在第九章补充说明。
+
+**原理：** 模型“记得”不是参数被修改，而是应用恢复、选择并重新发送了上下文。
+
+## PromptTemplate的数据转换边界
+
+PromptTemplate是确定性数据转换器，只负责变量绑定和消息组装，生成PromptValue，本身不会调用模型。
+
+PromptValue可以转换为字符串交给传统LLM，也可以转换为消息列表交给Chat Model。ChatPromptTemplate会保留System、Human、AI和Tool等角色边界。
+
+`partial()`相当于部分参数绑定，生成携带预填充值的新模板，不是记忆，也不会修改模型。
+
+MessagesPlaceholder在指定位置插入完整Message序列，能够保留Role、Tool Call、ToolMessage和多模态结构，但不负责读取存储、裁剪Token或生成摘要。
+
+**总结：** Prompt负责“怎样组织输入”，Memory负责“信息怎样保存和召回”，Context Engineering负责“本次模型究竟看什么”。
+
+**面试重点：** 能够讲清Message到供应商协议再到AIMessage的双向转换、模型无状态的真实含义、`content`与`content_blocks`的边界，以及PromptTemplate只是确定性转换而不是记忆系统。
+
+# 第五章补充：Tool Calling协议、MCP与安全边界
+
+客户端Tool让模型提出行动请求，但真实行动仍由受控的宿主程序执行。
+
+**本质：** 模型负责语义选择和参数生成，代码负责校验、授权、执行与副作用控制。
+
+## Tool Schema与bind_tools声明机制
+
+一个完整工具包含：
+
+- `name`和`description`，帮助模型识别能力与适用条件。
+- `args_schema`，定义参数名称、类型、必填项和约束。
+- execution logic，执行Python、数据库或远程调用。
+- result/error policy，定义返回形式和异常策略。
+
+`@tool`可以根据函数签名、类型注解和Docstring构造BaseTool。类型注解决定参数形状，描述影响模型何时选择工具。
+
+工具Description不是安全策略，即使写着“仅管理员可用”，服务端仍然必须重新鉴权。
+
+`bind_tools`具有严格的声明流程：
+
+1. 把工具转换成统一Schema。
+2. 再转换为供应商支持的工具格式。
+3. 将定义绑定到后续模型请求。
+
+它不会执行函数、访问数据库、回传工具结果或自动形成循环。模型返回的`tool_calls`只是结构化调用意图，不能等同于工具已经运行。
+
+**简短勘误：** `invalid_tool_calls`表示工具调用无法被正确解析，通常发生在执行之前；它不是工具函数执行失败的记录。
+
+Schema可以提高格式可靠性，但不能保证模型选对工具，也不能保证参数在业务语义上正确。
+
+## 完整工具调用闭环与错误分层
+
+以下严格顺序描述的是客户端工具（client-side tools），即工具由Agent宿主执行：
+
+1. 模型返回带`tool_calls`的AIMessage。
+2. 宿主按名称查找工具。
+3. 运行时注入ToolRuntime等隐藏信息，再由BaseTool完成Schema校验。
+4. 执行真实函数、协程或远程调用。
+5. 结果被包装为ToolMessage或Command。
+6. `tool_call_id`把结果关联到原始请求。
+7. AIMessage和ToolMessage再次交给模型。
+8. 模型继续调用工具或生成最终回答。
+
+上述闭环可以用下面的时序图概括。错误分支表示宿主可以按策略要求模型修正，不代表所有运行时都会自动重试：
+
+![Client-side Tool Calling完整调用闭环时序图](LangChain.assets/tool-calling-sequence.png)
+
+供应商Server-side Tools由Provider在服务端执行，通常不会经过本地ToolRuntime、宿主函数和标准ToolMessage闭环，应按具体供应商协议观察其调用与结果。
+
+客户端工具场景中，一次AIMessage包含多个Tool Call时，每个调用都需要自己的ToolMessage。裁剪历史时也必须保留完整调用与结果配对。
+
+在当前实测`langgraph-prebuilt==1.0.13`中，ToolRuntime可以注入模型不应该填写的信息：
+
+- 当前State与Runtime Context。
+- Store与RunnableConfig。
+- Stream Writer与`tool_call_id`。
+- Thread、Run和重试相关执行信息。
+
+工具错误需要区分：
+
+- 解析错误：调用结构或参数JSON无法解析，工具尚未执行。
+- Schema错误：参数能够解析，但缺字段、类型不符或违反约束。
+- 执行错误：参数通过校验，但函数发生超时、权限错误或业务拒绝。
+
+参数问题适合反馈模型修正，临时网络错误可以有界重试，权限错误应立即拒绝，程序Bug应进入监控。
+
+互相独立的只读Tool Call可以并行；存在结果依赖、共享写入或顺序语义时，应显式串行化或使用确定性工作流。
+
+工具结果中的content发送给模型，artifact保留给应用；Command还可以更新State或参与图控制流。
+
+## MCP、幂等性与安全边界
+
+Tool Calling回答“模型如何表达想做什么”，MCP回答“宿主如何统一连接外部能力”。MCP可以暴露Tools、Resources、Prompts和其他上下文能力。
+
+典型关系是：模型生成Tool Call → 宿主中的MCP Client调用MCP Server → Server访问真实系统 → 结果转换为ToolMessage → 模型继续决策。
+
+模型通常不直接连接MCP Server。MCP工具经过Adapter后，可以表现成普通LangChain Tool，继续使用同一套工具闭环。
+
+Agent重试、网络超时、进程恢复和Checkpoint重放都可能重复执行工具。写操作需要：
+
+- 稳定的业务Idempotency Key。
+- 数据库唯一约束、条件更新或事务。
+- 将准备与提交拆分。
+- 高风险操作前进行人工审批。
+
+`tool_call_id`适合关联模型调用与ToolMessage，但不一定是跨重试都稳定的业务幂等键。
+
+Checkpoint只能保存图状态，不能回滚已经发生的外部副作用。生产环境还必须具备服务端授权、参数白名单、超时限额、租户隔离和审计日志。
+
+**总结：** Tool Schema约束模型怎样表达行动，宿主决定行动是否允许发生；MCP统一连接协议，但不会替代授权、幂等与审计。
+
+**面试重点：** 能够从`bind_tools`只声明不执行讲到完整Tool Call闭环，准确区分`invalid_tool_calls`、Schema校验错误和执行错误，并说明ToolRuntime注入、MCP分层、幂等性与服务端授权为什么缺一不可。
+
+# 第六章补充：结构化输出机制、策略与事实边界
+
+结构化输出用Schema定义模型输出与下游程序之间的数据契约。
+
+**本质：** Schema解决可解析性、字段类型和显式约束，不直接保证内容真实。
+
+## 四种结构化输出机制
+
+常见实现机制包括：
+
+- Provider-native：供应商原生接收Schema并约束生成，通常可靠性最高。
+- Tool Calling：把Schema转换成提交结果的工具，通过Tool Call参数传递数据。
+- JSON Mode：通常保证合法JSON，但不一定完整满足指定Schema。
+- Prompt加Output Parser：在Prompt中描述格式，再由应用解析文本。
+
+Provider-native约束最强，但只有部分模型支持，不同供应商支持的JSON Schema子集也不同，复杂Schema仍可能被拒绝。
+
+Tool Calling借用工具参数通道传递结果，要求模型支持工具调用。格式错误时，运行时可以把校验信息反馈给模型重新生成。
+
+JSON Mode只解决JSON语法，字段语义、必填项和枚举约束仍需Prompt说明和应用校验。
+
+Prompt加Parser兼容范围最广，但容易受到多余说明、Markdown围栏和字段漂移影响，适合作为缺少原生能力时的兼容方案。
+
+**取舍原则：** 优先使用模型稳定支持的Provider-native；其次使用Tool Calling；JSON Mode和Prompt Parser需要更强的应用端验证。
+
+`create_agent(response_format=...)`的自动策略只在ProviderStrategy与ToolStrategy间选择；JSON Mode和Prompt加Parser属于应用显式实现的兼容方案：
+
+![结构化输出策略选择图](LangChain.assets/structured-output-strategies.png)
+
+## LangChain策略与执行流程
+
+`with_structured_output`通常返回新的Runnable包装器，不会永久修改原模型。
+
+直接模型结构化输出具有严格顺序：
+
+1. 读取目标Schema。
+2. 转换为供应商原生Schema或Tool Schema。
+3. 调用模型生成结果。
+4. 提取JSON或Tool Call参数。
+5. 反序列化为Python对象或字典。
+6. 按Schema类型和解析路径执行校验。
+
+`include_raw=True`通常同时保留原始AIMessage、解析结果和解析异常，便于读取Token、Metadata和定位问题。
+
+Agent级结构化输出包含三类策略：
+
+- ProviderStrategy使用供应商原生能力。
+- ToolStrategy把Schema转换成结构化输出工具。
+- 直接传入受支持的Schema类型时，Agent可根据模型能力自动选择。
+
+显式指定策略可以固定行为，但不能让不支持该能力的模型凭空获得支持。最终结果写入Agent State的`structured_response`。
+
+ToolStrategy发生可修复错误时，可以形成反馈闭环：
+
+1. 模型产生错误结构。
+2. Parser或Schema校验失败。
+3. 错误原因被包装为ToolMessage。
+4. 模型读取错误后重新生成。
+
+自动重试会增加调用次数、延迟和成本，必须设置停止条件。其他策略不一定具有同样的ToolMessage重试路径。
+
+## Schema类型与事实正确性边界
+
+常见Schema类型包括：
+
+- Pydantic：提供字段描述和运行时类型与约束校验，通常返回Pydantic实例。
+- TypedDict：通常返回字典；直接模型包装器一般不提供Pydantic式自动校验，而当前Agent结构化输出路径会通过TypeAdapter校验，具体以执行路径为准。
+- dataclass：适合轻量数据描述，验证能力取决于具体解析路径。
+- JSON Schema：适合跨语言契约；原始Schema字典在部分ToolStrategy路径中主要用于描述参数形状，不保证自动运行完整JSON Schema Validator，应用仍应显式校验。
+
+Schema类型决定返回对象、运行时校验能力和跨语言兼容性，不只是代码写法不同。
+
+复杂Schema会增加输入Token，也更容易在深层嵌套、Union和大量Optional字段上失败。复杂抽取更适合拆成多个阶段，并对关键字段增加确定性校验。
+
+结构化输出可以约束或检查：
+
+- 输出可解析。
+- 字段类型满足声明。
+- 必填项和显式约束成立。
+
+实际保证强度取决于Provider、实现方式、Schema类型以及是否执行运行时Validator。
+
+它不能单独保证：
+
+- 事实来自可信来源。
+- 引用真正支持陈述。
+- 业务决策合理。
+- 模型不存在幻觉。
+
+生产系统还需要业务规则校验、可信RAG或Tool证据、引用追踪和持续评估。
+
+**总结：** Schema是语法和类型契约；事实可靠性来自数据源、业务校验、引用与评估。
+
+**面试重点：** 能够比较Provider-native、Tool Calling、JSON Mode和Prompt Parser的约束强度，说明ProviderStrategy与ToolStrategy的选择逻辑，准确区分Pydantic运行时校验与TypedDict等静态描述，并明确“结构合法不等于事实正确”。
+
+# 第七章补充：Agent运行循环原理
+
+Agent不是“拥有意识的对象”，而是让模型参与下一步决策、让运行时负责执行动作的一套循环控制系统。
+
+**本质：** 模型负责选择，框架负责调度，工具负责产生真实结果，State负责承接过程。
+
+## Agent的定义与适用边界
+
+Chain、Workflow与Agent的差异主要在控制权：
+
+- Chain的步骤和顺序基本固定。
+- Workflow可以分支、并行和循环，但路由规则主要由代码确定。
+- Agent把部分下一步选择交给模型，例如是否调用工具、调用哪个工具、何时结束。
+
+Agent适合意图开放、工具选择依赖语义、步骤难以提前枚举的任务。
+
+高风险、强顺序或强确定性流程，不适合完全交给Agent：
+
+- 支付、退款、删除数据等真实副作用。
+- 必须严格按业务规则执行的审批。
+- 输入、输出和分支都可以提前穷举的流程。
+- 对调用次数、成本和延迟有硬上限的链路。
+
+**常见工程形态是“确定性Workflow包围Agent”**：代码负责鉴权、规则校验和最终执行，Agent只负责理解、规划或候选选择。
+
+## create_agent的循环与State
+
+LangChain 1.x的`create_agent()`返回`CompiledStateGraph`。创建阶段并不调用模型，而是构造一张可以反复执行的状态图。
+
+图通常包含Model Node；传入工具时包含Tools Node；Node-style Middleware被编译为节点，Wrap-style Middleware被包在模型或工具调用外层。
+
+默认`AgentState`至少包含`messages`，启用结构化输出时还可以包含`structured_response`，也可以扩展任务阶段、审批结果和业务对象。
+
+**State不是Prompt。** 只有Model Node从State中选择并组装进消息、系统提示词、工具Schema或响应Schema的内容，模型才能看到。
+
+State字段通过Reducer合并更新。`messages`通常使用`add_messages`：新ID追加、相同ID替换，并支持显式删除；它不是简单覆盖整个列表。
+
+一次默认循环有严格顺序：
+
+1. Model Node读取当前State并组装模型请求。
+2. 模型返回`AIMessage`，其中可能是最终文本，也可能包含`tool_calls`。
+3. `AIMessage`经Reducer合并进State。
+4. 路由检查是否存在工具调用。
+5. 没有工具调用时进入结束路径。
+6. 存在工具调用时，Tools Node根据名称找到工具并校验参数。
+7. 工具结果以带对应`tool_call_id`的`ToolMessage`，或以更新状态和路由的`Command`返回。
+8. 新结果合并进State，模型读取观察结果后再次决策。
+
+**ReAct勘误：** ReAct在工程上应理解为“决策—行动—观察”的控制循环，不等于框架会暴露模型完整的私有思维链。可稳定观测的是工具请求、工具结果、允许公开的推理摘要和最终回答。
+
+Agent的循环、结束和暂停恢复关系如下：
+
+![LangChain Agent状态机](LangChain.assets/agent-state-machine.png)
+
+## 并发、结束与控制边界
+
+一次`AIMessage`可以包含多个工具调用。互相独立的调用通常会在同一个super-step并行执行，每个结果通过自己的`tool_call_id`与请求配对。
+
+同一super-step内的节点读取本轮开始时的State，局部更新在步骤边界统一合并。多个分支写同一字段时必须有合适的Reducer，不能依赖“谁先完成”。
+
+有数据依赖的工具必须显式串行；有外部副作用的工具还需要事务、幂等键或服务端去重，因为State Reducer不能替外部系统回滚。
+
+正常退出路径包括：
+
+- 模型不再返回工具调用。
+- 结构化结果通过校验。
+- 工具配置为直接返回。
+- Middleware跳转到结束路径。
+
+以下情况属于保护性终止或执行失败，不是正常回答路径：
+
+- 调用上限策略主动终止。
+- 出现未处理异常。
+- 达到图的`recursion_limit`。
+
+`recursion_limit`限制的是图的super-step数量，不等于“最多调用N次工具”；触发时会抛出递归上限错误，也不会自动生成完整的最终回答。
+
+未知工具和参数校验错误可以转成错误`ToolMessage`让模型修正；任意工具内部异常并不保证默认被吞掉，生产环境应明确配置重试、错误转换和告警。
+
+Agent反复调用工具通常源于工具描述含糊、返回结果不可操作、完成条件不清，或者State没有记录已经尝试的动作。
+
+保护措施包括调用上限、重复调用检测、清晰的成功和失败条件、可操作的错误信息，以及把高风险执行放回确定性代码或人工审批。
+
+Interrupt用于在图的明确边界暂停，常见于人工审批和等待外部事件。恢复时，包含`interrupt()`的Node会从函数开头重新执行，因此Interrupt之前的副作用可能再次发生；这类操作必须使用幂等键、事务或服务端去重。Checkpointer只能恢复图状态，不能回滚已经发生的外部副作用。
+
+配置Checkpointer后，Durable Execution的可靠性取决于Checkpoint边界和持久性等级：`sync`在下一Step前同步落盘，恢复窗口最小但延迟更高；`async`与下一Step并行持久化，吞吐更好但存在较小崩溃窗口；`exit`只在图退出时持久化，不适合要求中途恢复的长任务。Task或独立节点可以形成恢复边界，但仍可能重执行；外部副作用仍需幂等键、事务或服务端去重。
+
+多智能体并不是另一套运行时，而是控制权与上下文的组织方式：
+
+- **Subagents**：主Agent保留控制权，把子任务作为Tool委派给工作Agent。
+- **Handoffs**：把后续控制权和必要State交给另一个Agent，适合职责明确的阶段切换。
+- **Router**：代码或模型先分类，再选择专用Agent或Workflow，路由后通常不形成自由循环。
+- **Skills**：按需加载指令与资源，重点是减少常驻上下文，而不是启动新的Agent。
+- 无论哪种模式，都要限制每个Agent可见的Messages、Tools、Memory和权限，避免把完整上下文无差别复制给所有Agent。
+
+**面试重点：** 能讲清`create_agent`是状态图、Model与Tools如何循环、State与Reducer怎样承接并发更新、Agent有哪些真实结束条件，并说明Durable Execution、多智能体控制权与ReAct的边界。
+
+# 第八章补充：Middleware运行原理
+
+Middleware用于在不修改Agent核心循环的前提下，拦截、修改或增强执行过程。
+
+**本质：Callback主要负责观察，Middleware可以真正参与数据流和控制流。**
+
+## Middleware与Callback的边界
+
+Callback通常用于日志、Trace、Token统计和生命周期事件监听，重点是记录“发生了什么”。
+
+Middleware可以改变：
+
+- 发给模型的Messages和System Prompt。
+- 当前使用的Model、Tools和Response Format。
+- State中的计数器、上下文和业务字段。
+- 是否继续调用模型或工具。
+- 异常如何重试、转换或向外抛出。
+- 是否暂停、跳转或提前结束。
+
+创建Agent时，Middleware会成为Agent结构的一部分，而不是在图外临时扫描的一组函数。
+
+适合放入Middleware的是跨多个Agent复用的横切逻辑，例如限额、缓存、脱敏、审计和容错。
+
+只属于某个业务步骤的核心规则，应放在明确的Node、Tool或Workflow中，避免把关键流程隐藏在Hook顺序里。
+
+## Node-style与Wrap-style机制
+
+Node-style Hook会成为图中的节点，负责在生命周期边界读取State并产生局部更新。
+
+四个主要时机是：
+
+- `before_agent`：每次Agent调用开始时执行一次，同一个Thread再次调用时仍会再次执行。
+- `before_model`：每一轮模型调用前执行，Agent循环时会重复进入。
+- `after_model`：每次模型返回后执行，可检查消息、更新State或改变路由。
+- `after_agent`：Agent正常进入最终退出路径前执行一次，适合收尾和统计。
+
+Node-style Hook返回的State Update仍然经过Reducer；通过`jump_to`改变路由时，还必须预先声明允许跳转的目标。
+
+Wrap-style Hook直接包围一次真实调用：`wrap_model_call`包围模型，`wrap_tool_call`包围工具。
+
+Wrapper拿到`handler`后可以：
+
+- 调用一次，完成正常执行。
+- 不调用，直接返回缓存、拒绝结果或短路响应。
+- 调用多次，实现Retry或Fallback。
+- 修改Request后再调用，实现动态模型、Prompt或工具选择。
+
+多个Middleware按列表顺序组成洋葱结构。对于`A、B、C`，before Hook通常是`A → B → C`，after Hook是`C → B → A`，Wrapper则是`A(B(C(handler)))`。
+
+Node-style与Wrap-style进入Agent执行过程的位置不同，其基础顺序可以概括为：
+
+![Middleware的Node-style与Wrap-style执行机制](LangChain.assets/middleware-execution-model.png)
+
+图中的Wrap-style路径表示A、B、C各调用一次Handler的基础情况；短路、重复调用和修改Request等变化仍由上下文及后面的模式列表说明。
+
+**更新原则：** 修改本次Model Request时优先使用`wrap_model_call`；持久更新State时，Node-style可以直接返回字典，支持Command或ExtendedModelResponse的Wrap-style路径也可以产生State Update，最终都要遵守State Schema和Reducer。
+
+## 常见模式、顺序与取舍
+
+常见Middleware虽然都属于横切能力，但底层机制和风险不同：
+
+- **Retry**：捕获可恢复异常后再次调用Handler，适合限流、超时等瞬时故障；工具存在副作用时必须先保证幂等。
+- **Fallback**：主模型或主服务失败后切换备用实现；备用项必须兼容工具调用、结构化输出、上下文长度和安全要求。
+- **Cache**：根据规范化Request生成Key，命中时跳过真实调用；Key应包含模型、Prompt、工具Schema、版本和权限作用域。
+- **Call Limit**：分别统计Model Call和Tool Call，达到阈值后终止、跳转或抛错；它不等同于图的`recursion_limit`。
+- **Summarization**：达到Token或消息阈值后，用摘要替换较早历史并保留近期消息；摘要是有损压缩。
+- **HITL**：在高风险工具产生真实副作用前触发Interrupt，等待人工批准、修改或拒绝，再通过同一Thread恢复执行。
+- **Guardrail**：在输入、模型输出或工具调用前后执行确定性规则、分类器或额外模型检查；Prompt约束不能替代服务端权限校验。
+
+Middleware顺序本身就是业务设计：先鉴权还是先读缓存、一次Retry是否消耗Call Limit、Fallback是否复用原缓存Key，都会改变安全、成本和可观测结果。
+
+鉴权应先于缓存读取，缓存Key必须包含权限作用域；HITL应靠近真正产生副作用的工具，而不是只审批模型生成的一段自然语言。
+
+**总结：Middleware应该让Agent主流程更清晰，而不是把主流程变成一组依赖偶然顺序的隐式行为。**
+
+**面试重点：** 能区分Middleware与Callback，说明Node-style和Wrap-style如何进入Agent图、多个中间件的洋葱顺序，以及Retry、Cache、HITL等模式为什么必须同时考虑幂等、权限和调用边界。
+
+# 第九章补充：上下文与记忆原理
+
+大模型本身通常是无状态的。所谓“记住”，本质上是应用保存信息，并在后续模型调用前重新选择和注入。
+
+**本质：** Context Engineering解决“这一次模型应该看到什么”，Memory解决“信息怎样跨时间保存和召回”。
+
+## 五类上下文的边界
+
+LangChain应用中容易混淆的五类数据是：
+
+- **Model Context**：当前一次模型真正看到的System Prompt、Messages、Tools、Response Format和RAG文档。
+- **State**：当前Thread中会变化的任务状态，例如消息、任务阶段、工具结果和审批状态。
+- **Runtime Context**：本次执行期间通常不变的依赖，例如`user_id`、`tenant_id`、权限信息和数据库连接。
+- **Store**：跨Thread保存的应用数据，例如用户偏好、长期事实、经验和共享知识。
+- **RunnableConfig**：执行控制信息，例如Callbacks、Tags、并发配置、`thread_id`和`recursion_limit`。
+
+几个边界不能混淆：
+
+- State不等于Model Context，字段只有被选入Model Request后模型才能看到。
+- 身份和权限属于Runtime Context，不应混进模型可以修改的State。
+- `thread_id`定位执行时间线，不等于`user_id`或租户身份。
+
+**边界原则：** 业务状态、执行依赖、持久数据和模型可见内容必须分开建模。
+
+五类上下文与两种持久化机制的边界如下，重点看哪些信息能够直接进入模型：
+
+![上下文、State、Checkpoint与长期记忆边界图](LangChain.assets/context-memory-boundaries.png)
+
+## 短期记忆与Checkpointer
+
+短期记忆可以概括为`State + Checkpointer + thread_id`。
+
+形成过程有严格顺序：
+
+1. Agent接收新消息并更新State。
+2. Model、Tool和Middleware继续产生局部更新。
+3. Checkpointer在图的super-step边界保存State Snapshot。
+4. 下一次调用传入相同`thread_id`。
+5. LangGraph默认读取该Thread的最新Checkpoint。
+6. 新输入经Reducer与历史State合并，模型再次读取所需上下文。
+
+Checkpoint相关标识的作用不同：
+
+- Checkpoint不只是聊天记录，还可以保存State各Channel的值、下一步任务、配置、Metadata和Interrupt。
+- `thread_id`标识一条执行时间线。
+- `checkpoint_id`标识时间线上的具体快照。
+- 从历史Checkpoint重新执行更接近创建执行分支，不是让现实世界回滚。
+
+长对话需要在信息完整性与Token预算之间取舍：
+
+- Trim描述裁剪策略，不决定是否持久化：只修改Model Request时原State不变；返回RemoveMessage等State Update时，裁剪结果会写入State。
+- Delete从State真正删除历史，状态更小但信息不可从当前State恢复。
+- Summarize把旧历史压缩为摘要并持久更新State，节省Token但会丢失细节。
+
+裁剪或摘要时必须保持`AIMessage(tool_calls)`与对应`ToolMessage`的协议完整，不能只保留其中一侧。
+
+## 长期记忆与Store
+
+Store按`namespace → key → value`组织长期数据，作用域可以跨Thread，也可以由应用定义为用户级、租户级或全局级。
+
+把信息写入Store只完成了“保存”。完整链路是：按当前任务检索、执行权限过滤和去重、转换成消息或Prompt，再注入本次Model Context。
+
+长期记忆常按内容分为：
+
+- **Semantic Memory**：用户偏好、稳定事实和概念。
+- **Episodic Memory**：过去发生的任务、行动和结果。
+- **Procedural Memory**：完成任务的方法、规则、Prompt或Skill。
+
+Store支持长期记忆，但不会自动把全部数据放进Prompt；检索过多同样会制造噪声、增加Token并暴露不应访问的信息。
+
+Namespace只是逻辑分组，不是权限系统。应用必须验证调用者身份，不能直接使用模型生成的`tenant_id`或`user_id`访问数据。
+
+多个Thread更新同一份记忆时，需要版本号、事务、唯一键、Upsert或冲突合并策略。
+
+Memory与RAG可以共用Embedding和Vector Store，但目标不同：Memory强调交互产生的可更新状态，RAG强调外部知识库中的回答证据。
+
+**面试重点：** 能清楚区分Model Context、State、Runtime Context、Store和RunnableConfig，说明短期记忆为何依赖Checkpointer与Thread，并解释长期记忆为什么必须经过检索和注入才会影响模型。
+
+# 第十章补充：RAG系统原理
+
+RAG不是“把文档放进向量数据库”，而是在生成前为当前问题找到、筛选并组织可验证的外部证据。
+
+**本质：** RAG是一套数据治理、检索、排序、上下文构造、生成和评估系统，而不是一个Vector Store组件。
+
+## 两条相对独立的链路
+
+典型RAG通过外部检索增强上下文，本身不要求修改模型参数，也可以与微调结合。它的目标之一是降低幻觉风险，但错误或过期的检索结果同样可能放大错误。
+
+典型离线索引主路径如下，具体系统可以合并、跳过或并行部分处理：
+
+1. 从文件、网页、数据库或API加载数据。
+2. 解析正文、标题、表格、页码和其他结构。
+3. 清洗噪声并统一格式。
+4. 切分为适合检索的Chunk。
+5. 生成Embedding或其他检索表示。
+6. 建立索引并保存原文、Metadata、稳定ID和版本信息。
+
+典型在线主路径如下，其中Query改写、多路融合、Rerank和后验校验按需求启用：
+
+1. 理解用户问题，必要时结合会话改写Query。
+2. 服务端鉴权并生成允许访问范围的Metadata Filter。
+3. 从一个或多个Retriever召回候选，并尽量在检索阶段应用权限Filter。
+4. 对候选执行业务过滤、去重和多路融合。
+5. 按需使用Reranker重新排序候选。
+6. 按Token预算组装上下文，让模型生成、引用、校验或在证据不足时拒答。
+
+几个边界需要同时保留：
+
+- `Document`的核心是正文、Metadata和可选ID；生产索引最好使用稳定的Document ID与Chunk ID。
+- 索引链和在线链要分别调试，错误可能来自解析、切分、索引、召回、排序、上下文组装或生成。
+- RAG与Agent是正交关系：固定的两步RAG可以没有Agent，Retriever也可以作为Tool交给Agent按需调用。
+
+两条链路及其连接关系如下，其中Query改写和Rerank都是按需启用的步骤：
+
+![RAG离线索引链与在线问答链](LangChain.assets/rag-dual-pipeline.png)
+
+## Chunk与Embedding的取舍
+
+Chunk决定系统以什么粒度匹配知识，但检索单位、返回单位和最终上下文单位不一定相同。
+
+Chunk参数的主要权衡是：
+
+- Chunk更小通常提高定位粒度，但不保证检索更准确；语义不足时，Embedding和排序效果也可能下降。
+- Chunk太大，上下文更完整，但无关内容会稀释表示，并快速占满Token预算。
+- Overlap太小会丢失边界语义，太大会增加索引成本、重复召回和上下文噪声。
+- Parent-Child模式可以让小Chunk负责召回、大Parent负责提供完整上下文。
+
+切分策略需要按文档结构和语言定制Separator，同时确认`chunk_size`的长度单位究竟是字符还是Token。
+
+Embedding把文本映射到固定维度的向量空间。相近只表示模型学习到的表示更接近，不表示事实正确。文档和查询应分别使用`embed_documents()`与`embed_query()`；部分模型会为两类输入使用不同指令或编码方式。
+
+Embedding分数必须结合具体后端解释：
+
+- Cosine Similarity和Dot Product通常越大越相似。
+- Euclidean Distance等距离值通常越小越相似。
+- 分数不是概率，不同模型、距离函数和数据库的分数不能直接比较。
+- 阈值必须在自己的数据集上校准。
+
+更换Embedding模型或版本时，如果向量空间、维度或分数语义不兼容，必须重新Embedding并重建索引；解析、清洗、Chunk、正文或Metadata结构变化，也可能独立要求重建索引。
+
+## Retriever、搜索与Rerank
+
+两者职责不同：
+
+- Vector Store负责保存向量并执行相似度搜索。
+- Retriever提供“Query输入、Document列表输出”的上层接口，底层可以连接Vector Store、BM25、Web搜索、SQL、图数据库或多个检索器。
+
+所以Vector Store不等于Retriever，更不等于完整RAG。
+
+常见召回方式各有边界：
+
+- **Dense Retrieval**擅长同义表达和语义相关性，但可能漏掉编号、错误码、函数名和罕见专有词。
+- **Sparse Retrieval**擅长精确词面匹配，但对同义改写和语义表达不敏感。
+- **Hybrid Search**同时使用Dense与Sparse结果，再通过排名融合或经过校准的分数进行合并。
+
+检索阶段还要处理以下取舍：
+
+- **精确检索与ANN**：精确最近邻返回指定距离函数下的精确Top-K，但不代表语义或事实正确；ANN以潜在召回损失换取更低延迟。
+- **Metadata Filter**：承载服务端鉴权结果生成的检索范围，但Filter本身不是鉴权系统，不能直接信任模型生成的租户或权限条件。
+- **Top-K与Threshold**：Top-K过小容易漏证据，过大会增加噪声；阈值方向取决于后端返回的是相关性还是距离。
+- **Rerank**：先扩大候选集合以优先提高召回率，再过滤、去重和重排；Reranker只能重排已有候选，不能找回第一阶段完全遗漏的文档。
+
+## 生成、引用与分层评估
+
+生成阶段需要同时处理：
+
+- **上下文组装**：控制文档数量、顺序、去重、边界和总Token预算。
+- **安全边界**：检索文档属于不可信输入，不能凭文档指令获得更高权限。
+- **Grounding**：回答中的陈述应有证据支持，证据不足时应拒答或请求补充。
+- **引用**：依赖稳定ID、页码和来源，不能让模型自行编造URL。
+
+评估必须分层：
+
+- 解析与索引层检查正文完整性、结构、Metadata、版本更新和Chunk可理解性。
+- Retrieval层检查候选相关性，以及有标注集时的Hit Rate、Recall@K和Precision@K；排序专项可扩展MRR或nDCG。
+- Generation层检查Answer Relevance、Groundedness和Citation Correctness；存在参考答案或权威事实基准时，再评估Correctness。
+- 端到端层检查答案质量、失败率、延迟、Token、检索次数和重排成本。
+
+排查错误时按现象定位：
+
+1. 候选集中没有证据，检查数据、解析、Chunk和召回。
+2. 候选存在但排名靠后，检查融合、Filter和Reranker。
+3. 上下文正确但回答错误，再检查Prompt、模型和生成约束。
+
+结构化聚合、精确计算和事务查询通常更适合SQL或确定性API，不能只召回几个Chunk后让模型估算。
+
+**面试重点：** 能把RAG拆成索引与在线问答两条链路，解释Chunk和Embedding分数的取舍，区分Vector Store、Retriever、ANN、Hybrid Search与Reranker，并能沿解析、召回、排序、生成四层定位质量问题。

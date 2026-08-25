@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1540" height="960" viewBox="0 0 1540 960" role="img" aria-labelledby="title desc">
+  <title id="title">上下文、State、Checkpoint与长期记忆边界图</title>
+  <desc id="desc">展示Model Context、State、Runtime Context、RunnableConfig、Checkpointer和Store的职责边界，以及只有被选择并注入Model Context的信息才会被模型看到。</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f8fbff"/><stop offset="1" stop-color="#f0fdf4"/></linearGradient>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#475569"/></marker>
+    <marker id="arrowBlue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#2563eb"/></marker>
+    <style>
+      .title{font:700 31px "Microsoft YaHei","PingFang SC",sans-serif;fill:#0f172a}.subtitle{font:400 16px "Microsoft YaHei","PingFang SC",sans-serif;fill:#475569}
+      .band{font:700 16px "Microsoft YaHei","PingFang SC",sans-serif;fill:#475569}.h{font:700 19px "Microsoft YaHei","PingFang SC",sans-serif;fill:#0f172a}.body{font:400 14px "Microsoft YaHei","PingFang SC",sans-serif;fill:#334155}.small{font:400 12px "Microsoft YaHei","PingFang SC",sans-serif;fill:#64748b}.light{font:700 19px "Microsoft YaHei","PingFang SC",sans-serif;fill:white}
+    </style>
+  </defs>
+  <rect width="1540" height="960" rx="26" fill="url(#bg)"/>
+  <text x="62" y="62" class="title">“保存了”不等于“模型看见了”</text>
+  <text x="62" y="92" class="subtitle">模型只读取本次Model Context；State、Store和运行时信息是否进入Prompt，由应用的选择与注入逻辑决定。</text>
+
+  <rect x="56" y="132" width="1428" height="206" rx="22" fill="#eff6ff" stroke="#93c5fd"/>
+  <text x="84" y="166" class="band">模型可见层</text>
+  <rect x="430" y="178" width="560" height="126" rx="20" fill="#1d4ed8"/>
+  <text x="710" y="216" text-anchor="middle" class="light">Model Context：本次模型真正看到的输入</text>
+  <text x="710" y="250" text-anchor="middle" style="font:400 14px 'Microsoft YaHei',sans-serif;fill:#dbeafe">System Prompt · Messages · Tools · Response Format · RAG Documents</text>
+  <text x="710" y="278" text-anchor="middle" style="font:400 13px 'Microsoft YaHei',sans-serif;fill:#bfdbfe">发送请求后模型完成一次无状态推理</text>
+  <rect x="1100" y="188" width="300" height="100" rx="16" fill="#fff" stroke="#60a5fa" stroke-width="2"/>
+  <text x="1250" y="222" text-anchor="middle" class="h">Context Builder</text>
+  <text x="1250" y="250" text-anchor="middle" class="body">选择 · 裁剪 · 摘要 · 去重</text>
+  <text x="1250" y="273" text-anchor="middle" class="small">决定本轮究竟注入什么</text>
+  <path d="M1100 238H990" stroke="#2563eb" stroke-width="3" marker-end="url(#arrowBlue)"/>
+  <rect x="112" y="188" width="250" height="100" rx="16" fill="#fff" stroke="#60a5fa" stroke-width="2"/>
+  <text x="237" y="222" text-anchor="middle" class="h">Model Node</text>
+  <text x="237" y="250" text-anchor="middle" class="body">消费Model Context并推理</text>
+  <text x="237" y="273" text-anchor="middle" class="small">产生AIMessage等局部Update</text>
+  <path d="M430 238H362" stroke="#2563eb" stroke-width="3" marker-end="url(#arrowBlue)"/>
+
+  <rect x="56" y="370" width="1428" height="290" rx="22" fill="#ffffff" stroke="#cbd5e1"/>
+  <text x="84" y="404" class="band">执行层</text>
+  <rect x="105" y="438" width="350" height="154" rx="18" fill="#dcfce7" stroke="#4ade80" stroke-width="2"/>
+  <text x="280" y="477" text-anchor="middle" class="h">State</text>
+  <text x="280" y="507" text-anchor="middle" class="body">当前Thread中可变化的业务状态</text>
+  <text x="280" y="535" text-anchor="middle" class="small">messages · 阶段 · 工具结果 · 审批状态</text>
+  <text x="280" y="564" text-anchor="middle" class="small">通过Reducer合并局部Update</text>
+
+  <rect x="595" y="438" width="350" height="154" rx="18" fill="#fff7ed" stroke="#fb923c" stroke-width="2"/>
+  <text x="770" y="477" text-anchor="middle" class="h">Runtime Context</text>
+  <text x="770" y="507" text-anchor="middle" class="body">本次执行依赖，通常不由模型修改</text>
+  <text x="770" y="535" text-anchor="middle" class="small">user_id · tenant_id · 权限 · 数据库连接</text>
+  <text x="770" y="564" text-anchor="middle" class="small">直接注入Node / Tool / Middleware</text>
+
+  <rect x="1085" y="438" width="350" height="154" rx="18" fill="#f3e8ff" stroke="#c084fc" stroke-width="2"/>
+  <text x="1260" y="477" text-anchor="middle" class="h">RunnableConfig</text>
+  <text x="1260" y="507" text-anchor="middle" class="body">控制“怎样执行”，不是业务记忆</text>
+  <text x="1260" y="535" text-anchor="middle" class="small">Callbacks · Tags · 并发 · recursion_limit</text>
+  <text x="1260" y="564" text-anchor="middle" class="small">configurable.thread_id · 其他configurable</text>
+  <rect x="1110" y="382" width="300" height="42" rx="11" fill="#faf5ff" stroke="#c084fc"/>
+  <text x="1260" y="409" text-anchor="middle" class="body">Graph Runtime / Scheduler</text>
+
+  <path d="M455 474C650 350 970 340 1135 288" fill="none" stroke="#2563eb" stroke-width="2.5" marker-end="url(#arrowBlue)"/>
+  <text x="670" y="378" class="small">按需选择State字段</text>
+  <path d="M945 476C1010 430 1070 390 1168 288" fill="none" stroke="#f59e0b" stroke-width="2" stroke-dasharray="7 6" marker-end="url(#arrow)"/>
+  <text x="1003" y="398" class="small">只有显式选择才进入Prompt</text>
+  <path d="M1260 438V424" fill="none" stroke="#9333ea" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <text x="1300" y="360" class="small">控制执行引擎，默认不进入模型输入</text>
+  <path d="M237 288V346H280V438" fill="none" stroke="#16a34a" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <text x="250" y="333" class="small">AIMessage经Reducer形成State Update</text>
+
+  <rect x="56" y="692" width="1428" height="210" rx="22" fill="#f8fafc" stroke="#94a3b8"/>
+  <text x="84" y="726" class="band">持久化层</text>
+  <rect x="110" y="754" width="520" height="112" rx="18" fill="#ecfdf5" stroke="#34d399" stroke-width="2"/>
+  <text x="370" y="790" text-anchor="middle" class="h">Checkpointer：Thread State持久化机制</text>
+  <text x="370" y="819" text-anchor="middle" class="body">thread_id → 多个Checkpoint Snapshot</text>
+  <text x="370" y="845" text-anchor="middle" class="small">State + Checkpointer + thread_id共同形成短期记忆</text>
+  <path d="M250 592V754" stroke="#16a34a" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <path d="M310 754V592" stroke="#16a34a" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <text x="225" y="684" class="small">保存</text>
+  <text x="320" y="684" class="small">恢复</text>
+
+  <rect x="850" y="754" width="520" height="112" rx="18" fill="#ecfeff" stroke="#22d3ee" stroke-width="2"/>
+  <text x="1110" y="790" text-anchor="middle" class="h">Store：跨Thread长期记忆</text>
+  <text x="1110" y="819" text-anchor="middle" class="body">namespace → key → value</text>
+  <text x="1110" y="845" text-anchor="middle" class="small">用户偏好 · 长期事实 · 经验 · 共享知识</text>
+  <path d="M1110 754V646H1250V288" fill="none" stroke="#0891b2" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <text x="1128" y="690" class="small">检索 + 权限过滤 + 去重后才能注入</text>
+
+  <rect x="348" y="914" width="844" height="30" rx="10" fill="#fff1f2" stroke="#fda4af"/>
+  <text x="770" y="935" text-anchor="middle" class="body">Trace只记录已发生的执行过程；它既不替代Checkpoint，也不会自动成为Memory。</text>
+</svg>

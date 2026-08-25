@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1540" height="940" viewBox="0 0 1540 940" role="img" aria-labelledby="title desc">
+  <title id="title">结构化输出策略选择图</title>
+  <desc id="desc">根据供应商原生Schema和Tool Calling支持情况选择Provider Native、Tool Calling、JSON Mode或Prompt加Parser，并比较四种机制的约束能力和风险。</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fbfdff"/><stop offset="1" stop-color="#f5f3ff"/></linearGradient>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#64748b"/></marker>
+    <style>
+      .title{font:700 31px "Microsoft YaHei","PingFang SC",sans-serif;fill:#0f172a}.subtitle{font:400 16px "Microsoft YaHei","PingFang SC",sans-serif;fill:#475569}
+      .h{font:700 18px "Microsoft YaHei","PingFang SC",sans-serif;fill:#0f172a}.body{font:400 14px "Microsoft YaHei","PingFang SC",sans-serif;fill:#334155}.small{font:400 12px "Microsoft YaHei","PingFang SC",sans-serif;fill:#64748b}.yes{font:700 13px "Microsoft YaHei","PingFang SC",sans-serif;fill:#15803d}.no{font:700 13px "Microsoft YaHei","PingFang SC",sans-serif;fill:#b91c1c}
+    </style>
+  </defs>
+  <rect width="1540" height="940" rx="26" fill="url(#bg)"/>
+  <text x="62" y="62" class="title">结构化输出：Agent自动策略与手工兼容方案</text>
+  <text x="62" y="92" class="subtitle">create_agent只在ProviderStrategy与ToolStrategy间自动选择；JSON Mode和Prompt+Parser需要应用显式实现。</text>
+
+  <rect x="600" y="130" width="340" height="66" rx="16" fill="#334155"/>
+  <text x="770" y="171" text-anchor="middle" style="font:700 19px 'Microsoft YaHei',sans-serif;fill:white">目标 Schema</text>
+
+  <polygon points="770,232 930,302 770,372 610,302" fill="#eff6ff" stroke="#60a5fa" stroke-width="2"/>
+  <text x="770" y="292" text-anchor="middle" class="h">模型稳定支持</text><text x="770" y="318" text-anchor="middle" class="body">Provider-native Schema？</text>
+  <path d="M770 196V232" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <rect x="1050" y="258" width="342" height="88" rx="16" fill="#dcfce7" stroke="#4ade80" stroke-width="2"/>
+  <text x="1221" y="292" text-anchor="middle" class="h">Provider Native</text><text x="1221" y="320" text-anchor="middle" class="body">ProviderStrategy / 原生Schema约束</text>
+  <path d="M930 302H1050" stroke="#16a34a" stroke-width="2.5" marker-end="url(#arrow)"/><text x="983" y="288" class="yes">是</text>
+
+  <polygon points="770,414 930,484 770,554 610,484" fill="#f5f3ff" stroke="#a78bfa" stroke-width="2"/>
+  <text x="770" y="474" text-anchor="middle" class="h">模型是否稳定支持</text><text x="770" y="500" text-anchor="middle" class="body">Tool Calling？</text>
+  <path d="M770 372V414" stroke="#dc2626" stroke-width="2" marker-end="url(#arrow)"/><text x="784" y="401" class="no">否</text>
+
+  <rect x="1050" y="440" width="342" height="88" rx="16" fill="#ede9fe" stroke="#8b5cf6" stroke-width="2"/>
+  <text x="1221" y="474" text-anchor="middle" class="h">Tool Calling</text><text x="1221" y="502" text-anchor="middle" class="body">ToolStrategy / 参数通道承载结果</text>
+  <path d="M930 484H1050" stroke="#16a34a" stroke-width="2.5" marker-end="url(#arrow)"/><text x="983" y="470" class="yes">是</text>
+
+  <polygon points="770,596 930,666 770,736 610,666" fill="#fff7ed" stroke="#fb923c" stroke-width="2"/>
+  <text x="770" y="656" text-anchor="middle" class="h">手工调用时是否支持稳定的</text><text x="770" y="682" text-anchor="middle" class="body">JSON Mode？</text>
+  <path d="M770 554V596" stroke="#64748b" stroke-width="2" stroke-dasharray="7 5" marker-end="url(#arrow)"/><text x="784" y="583" class="no">否：离开Agent自动策略</text>
+
+  <rect x="1012" y="552" width="398" height="48" rx="12" fill="#fff" stroke="#fdba74"/>
+  <text x="1211" y="582" text-anchor="middle" class="body">以下为手工兼容路径，不会被create_agent自动选择</text>
+
+  <rect x="1050" y="622" width="342" height="88" rx="16" fill="#ffedd5" stroke="#fb923c" stroke-width="2"/>
+  <text x="1221" y="656" text-anchor="middle" class="h">JSON Mode</text><text x="1221" y="684" text-anchor="middle" class="body">保证JSON语法，Schema仍需应用校验</text>
+  <path d="M930 666H1050" stroke="#16a34a" stroke-width="2.5" marker-end="url(#arrow)"/><text x="983" y="652" class="yes">是</text>
+
+  <rect x="599" y="790" width="342" height="88" rx="16" fill="#fee2e2" stroke="#f87171" stroke-width="2"/>
+  <text x="770" y="824" text-anchor="middle" class="h">Prompt + Output Parser</text><text x="770" y="852" text-anchor="middle" class="body">兼容性最高，格式漂移风险也最高</text>
+  <path d="M770 736V790" stroke="#dc2626" stroke-width="2" marker-end="url(#arrow)"/><text x="784" y="774" class="no">否</text>
+
+  <rect x="72" y="226" width="404" height="560" rx="22" fill="#fff" stroke="#cbd5e1"/>
+  <text x="104" y="270" class="h">四条路径真正解决什么</text>
+  <line x1="104" y1="288" x2="444" y2="288" stroke="#e2e8f0"/>
+  <circle cx="118" cy="334" r="9" fill="#22c55e"/><text x="140" y="329" class="h">Provider Native</text><text x="140" y="354" class="body">供应商在生成通道中应用Schema约束</text><text x="140" y="376" class="small">通常最可靠，但受模型与Schema子集限制</text>
+  <circle cx="118" cy="436" r="9" fill="#8b5cf6"/><text x="140" y="431" class="h">Tool Calling</text><text x="140" y="456" class="body">把目标对象放入“工具参数”通道</text><text x="140" y="478" class="small">可将校验错误回填给模型修正</text>
+  <circle cx="118" cy="538" r="9" fill="#f97316"/><text x="140" y="533" class="h">JSON Mode</text><text x="140" y="558" class="body">重点保证可解析JSON，而非完整Schema</text><text x="140" y="580" class="small">必填、枚举与业务约束仍需验证</text>
+  <circle cx="118" cy="640" r="9" fill="#ef4444"/><text x="140" y="635" class="h">Prompt + Parser</text><text x="140" y="660" class="body">靠文字约定格式，再解析模型文本</text><text x="140" y="682" class="small">注意围栏、多余说明与字段漂移</text>
+  <rect x="104" y="716" width="340" height="48" rx="11" fill="#fff1f2" stroke="#fda4af"/>
+  <text x="274" y="746" text-anchor="middle" class="body">所有路径最后都要做业务与事实校验</text>
+
+  <rect x="1024" y="768" width="400" height="110" rx="18" fill="#fff" stroke="#cbd5e1"/>
+  <text x="1050" y="802" class="h">错误处理不是统一机制</text>
+  <text x="1050" y="830" class="body">ToolStrategy可把校验错误作为ToolMessage反馈</text>
+  <text x="1050" y="856" class="small">其他路径需应用显式重试；所有重试都要限制次数、延迟与成本</text>
+</svg>

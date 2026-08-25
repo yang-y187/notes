@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1120" viewBox="0 0 1600 1120" role="img" aria-labelledby="title desc">
+  <title id="title">LangChain Agent状态机</title>
+  <desc id="desc">展示Agent从State进入模型路由、普通工具执行、HITL暂停恢复、Reducer合并、return_direct判断到正常结束或保护性失败的状态转移。</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f8fbff"/><stop offset="1" stop-color="#f0fdf4"/></linearGradient>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#475569"/></marker>
+    <marker id="arrowBlue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#2563eb"/></marker>
+    <marker id="arrowRed" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#dc2626"/></marker>
+    <style>
+      .title{font:700 31px "Microsoft YaHei","PingFang SC",sans-serif;fill:#0f172a}.subtitle{font:400 16px "Microsoft YaHei","PingFang SC",sans-serif;fill:#475569}
+      .h{font:700 18px "Microsoft YaHei","PingFang SC",sans-serif;fill:#0f172a}.body{font:400 14px "Microsoft YaHei","PingFang SC",sans-serif;fill:#334155}.small{font:400 12px "Microsoft YaHei","PingFang SC",sans-serif;fill:#64748b}.label{font:700 12px "Microsoft YaHei","PingFang SC",sans-serif;fill:#475569}
+    </style>
+  </defs>
+  <rect width="1600" height="1120" rx="26" fill="url(#bg)"/>
+  <text x="62" y="62" class="title">Agent不是一条Chain，而是一张会循环的状态图</text>
+  <text x="62" y="92" class="subtitle">工具结果先写回State，再决定继续循环或直接退出；HITL恢复后按每个Tool Call分别处理。</text>
+
+  <circle cx="86" cy="190" r="18" fill="#334155"/>
+  <path d="M104 190H150" stroke="#475569" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <text x="115" y="174" class="small">新输入</text>
+
+  <rect x="150" y="140" width="260" height="100" rx="17" fill="#e2e8f0" stroke="#64748b" stroke-width="2"/>
+  <text x="280" y="177" text-anchor="middle" class="h">Agent State</text>
+  <text x="280" y="205" text-anchor="middle" class="body">messages与业务字段</text>
+  <text x="280" y="227" text-anchor="middle" class="small">新输入或恢复结果经Reducer合并</text>
+
+  <path d="M410 190H500" stroke="#2563eb" stroke-width="2.7" marker-end="url(#arrowBlue)"/>
+  <rect x="500" y="135" width="280" height="110" rx="18" fill="#dbeafe" stroke="#60a5fa" stroke-width="2"/>
+  <text x="640" y="174" text-anchor="middle" class="h">before_model → Model Node</text>
+  <text x="640" y="202" text-anchor="middle" class="body">读取State并生成AIMessage</text>
+  <text x="640" y="226" text-anchor="middle" class="small">模型输出先通过Reducer写回State</text>
+
+  <path d="M780 190H840" stroke="#2563eb" stroke-width="2.7" marker-end="url(#arrowBlue)"/>
+  <polygon points="960,120 1080,190 960,260 840,190" fill="#eef2ff" stroke="#818cf8" stroke-width="2"/>
+  <text x="960" y="181" text-anchor="middle" class="h">模型输出如何路由？</text>
+  <text x="960" y="208" text-anchor="middle" class="small">最终结果 / 普通tool_calls</text>
+
+  <path d="M1080 190H1390" stroke="#16a34a" stroke-width="2.7" marker-end="url(#arrow)"/>
+  <text x="1228" y="174" text-anchor="middle" class="label">最终文本或structured_response已就绪</text>
+  <circle cx="1425" cy="190" r="31" fill="none" stroke="#16a34a" stroke-width="4"/><circle cx="1425" cy="190" r="20" fill="#22c55e"/>
+  <text x="1425" y="244" text-anchor="middle" class="body">正常退出</text>
+  <text x="1425" y="265" text-anchor="middle" class="small">after_agent收尾</text>
+  <text x="1130" y="286" class="small">ToolStrategy的结构化“伪工具”由框架解析，不进入外部Tools Node</text>
+
+  <path d="M960 260V320" stroke="#2563eb" stroke-width="2.7" marker-end="url(#arrowBlue)"/>
+  <text x="975" y="298" class="label">普通外部tool_calls</text>
+  <polygon points="960,320 1080,390 960,460 840,390" fill="#fff7ed" stroke="#fb923c" stroke-width="2"/>
+  <text x="960" y="380" text-anchor="middle" class="h">是否需要HITL？</text>
+  <text x="960" y="407" text-anchor="middle" class="small">按工具与风险策略决定</text>
+
+  <path d="M840 390H780" stroke="#16a34a" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <text x="802" y="376" class="label">否</text>
+  <rect x="500" y="335" width="280" height="110" rx="18" fill="#ecfeff" stroke="#22d3ee" stroke-width="2"/>
+  <text x="640" y="374" text-anchor="middle" class="h">Tools Node</text>
+  <text x="640" y="402" text-anchor="middle" class="body">查找、校验并执行已批准工具</text>
+  <text x="640" y="426" text-anchor="middle" class="small">产生ToolMessage或Command Update</text>
+
+  <path d="M1080 390H1100" stroke="#f59e0b" stroke-width="2.7" marker-end="url(#arrow)"/>
+  <text x="1085" y="376" class="label">是</text>
+  <rect x="1100" y="335" width="310" height="110" rx="18" fill="#fef3c7" stroke="#f59e0b" stroke-width="2"/>
+  <text x="1255" y="374" text-anchor="middle" class="h">Interrupt + Checkpoint</text>
+  <text x="1255" y="402" text-anchor="middle" class="body">保存Thread状态并暂停</text>
+  <text x="1255" y="426" text-anchor="middle" class="small">持久恢复必须配置Checkpointer</text>
+
+  <rect x="1100" y="500" width="310" height="100" rx="18" fill="#fffbeb" stroke="#fbbf24" stroke-width="2"/>
+  <text x="1255" y="538" text-anchor="middle" class="h">Command(resume=...)</text>
+  <text x="1255" y="566" text-anchor="middle" class="body">使用相同thread_id恢复</text>
+  <text x="1255" y="588" text-anchor="middle" class="small">被中断的after_model节点从头重跑</text>
+  <path d="M1255 445V500" stroke="#f59e0b" stroke-width="2.5" marker-end="url(#arrow)"/>
+
+  <polygon points="1255,635 1380,700 1255,765 1130,700" fill="#fff7ed" stroke="#fb923c" stroke-width="2"/>
+  <text x="1255" y="690" text-anchor="middle" class="h">逐个Tool Call决策</text>
+  <text x="1255" y="716" text-anchor="middle" class="small">同一批可批准、修改或拒绝</text>
+  <path d="M1255 600V635" stroke="#f59e0b" stroke-width="2.5" marker-end="url(#arrow)"/>
+
+  <path d="M1130 700H820V390H780" fill="none" stroke="#f59e0b" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <text x="840" y="684" class="label">approve / edit → 执行对应工具</text>
+
+  <rect x="1080" y="820" width="350" height="100" rx="17" fill="#fff1f2" stroke="#fda4af" stroke-width="2"/>
+  <text x="1255" y="857" text-anchor="middle" class="h">reject：人工ToolMessage</text>
+  <text x="1255" y="885" text-anchor="middle" class="body">status="error"，对应工具不执行</text>
+  <text x="1255" y="907" text-anchor="middle" class="small">随后和其他结果一起合并，再回到模型</text>
+  <path d="M1255 765V820" stroke="#dc2626" stroke-width="2.5" marker-end="url(#arrowRed)"/>
+
+  <rect x="490" y="570" width="300" height="110" rx="18" fill="#dcfce7" stroke="#4ade80" stroke-width="2"/>
+  <text x="640" y="608" text-anchor="middle" class="h">Reducer合并工具结果</text>
+  <text x="640" y="636" text-anchor="middle" class="body">ToolMessage / Command → State</text>
+  <text x="640" y="660" text-anchor="middle" class="small">先合并，再执行条件路由</text>
+  <path d="M640 445V570" stroke="#2563eb" stroke-width="2.5" marker-end="url(#arrowBlue)"/>
+  <path d="M1080 870H960V625H790" fill="none" stroke="#dc2626" stroke-width="2" stroke-dasharray="7 5" marker-end="url(#arrowRed)"/>
+
+  <polygon points="640,750 785,825 640,900 495,825" fill="#ecfdf5" stroke="#34d399" stroke-width="2"/>
+  <text x="640" y="814" text-anchor="middle" class="h">工具批次是否直接返回？</text>
+  <text x="640" y="840" text-anchor="middle" class="small">在State合并完成后判断</text>
+  <path d="M640 680V750" stroke="#2563eb" stroke-width="2.5" marker-end="url(#arrowBlue)"/>
+
+  <path d="M495 825H450V190H410" fill="none" stroke="#2563eb" stroke-width="3" marker-end="url(#arrowBlue)"/>
+  <text x="458" y="930" class="label">否：更新后的State进入下一轮Model</text>
+  <path d="M785 825V945H1515V190H1456" fill="none" stroke="#16a34a" stroke-width="2.7" marker-end="url(#arrow)"/>
+  <text x="850" y="935" class="label">是：本轮已执行的客户端工具全部return_direct=True</text>
+
+  <rect x="70" y="400" width="330" height="270" rx="20" fill="#fff1f2" stroke="#f87171" stroke-width="2"/>
+  <text x="100" y="442" class="h">保护性终止 / 执行失败</text>
+  <text x="100" y="484" class="body">• 达到Model或Tool调用上限</text>
+  <text x="100" y="518" class="body">• 达到recursion_limit</text>
+  <text x="100" y="552" class="body">• 未处理的模型、工具或Reducer异常</text>
+  <text x="100" y="602" class="small">这不是正常回答路径，也不会自动生成</text>
+  <text x="100" y="625" class="small">完整最终答案；外部副作用也不会回滚。</text>
+  <path d="M500 166C420 142 300 250 270 400" fill="none" stroke="#dc2626" stroke-width="2" stroke-dasharray="7 6" marker-end="url(#arrowRed)"/>
+  <path d="M500 390C442 390 430 470 400 500" fill="none" stroke="#dc2626" stroke-width="2" stroke-dasharray="7 6" marker-end="url(#arrowRed)"/>
+
+  <rect x="72" y="980" width="1456" height="90" rx="17" fill="#fff" stroke="#cbd5e1"/>
+  <text x="102" y="1014" class="h">两个容易混淆的结束机制</text>
+  <text x="102" y="1042" class="body">return_direct是Tool属性，并在工具结果合并后参与路由；jump_to="end"是Middleware声明并返回的控制流更新，不是Tools结果判定。</text>
+  <text x="102" y="1064" class="small">ReAct描述“决策 → 行动 → 观察”的控制循环，不等于公开模型私有思维链。</text>
+</svg>
