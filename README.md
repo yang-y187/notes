@@ -1,28 +1,32 @@
 <p align="center">
-  <img src="./assets/readme-cover.jpg" alt="打开的开发笔记，旁边是终端与系统架构图" width="100%">
+  <img src="./assets/readme-cover-tech.jpg" alt="黑色芯片与电蓝色电路" width="100%">
 </p>
 
-<h1 align="center">开发笔记</h1>
+<h1 align="center"><code>&gt;_</code> 开发笔记</h1>
 
-<p align="center">Java 后端 · 分布式系统 · AI Agent</p>
+<p align="center">
+  <code>JAVA BACKEND</code> · <code>DISTRIBUTED SYSTEMS</code> · <code>AI AGENTS</code>
+</p>
 
 <p align="center">
   <a href="./%E6%96%87%E4%BB%B6%E7%B4%A2%E5%BC%95.md"><strong>全部文件</strong></a>
-  ·
+  &nbsp; / &nbsp;
+  <a href="#按主题浏览">专题</a>
+  &nbsp; / &nbsp;
   <a href="./%E5%AF%BC%E5%87%BA/README.pdf">首页 PDF</a>
-  ·
+  &nbsp; / &nbsp;
   <a href="./%E5%AF%BC%E5%87%BA/%E6%96%87%E4%BB%B6%E7%B4%A2%E5%BC%95.pdf">索引 PDF</a>
 </p>
 
-## 笔记速览
+## 快速访问
 
-| 主题 | 原文 | PDF |
-| :-- | :--: | :--: |
-| JVM | [阅读](./jvm.md) | [PDF](./%E5%AF%BC%E5%87%BA/jvm.pdf) |
-| Spring | [阅读](./Spring.md) | [PDF](./%E5%AF%BC%E5%87%BA/Spring.pdf) |
-| MySQL | [阅读](./MySQL%E9%AB%98%E7%BA%A7%E5%AE%8B%E7%BA%A2%E5%BA%B7.md) | [PDF](./%E5%AF%BC%E5%87%BA/MySQL%E9%AB%98%E7%BA%A7%E5%AE%8B%E7%BA%A2%E5%BA%B7.pdf) |
-| 并发编程 | [阅读](./%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B.md) | [PDF](./%E5%AF%BC%E5%87%BA/%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B.pdf) |
-| Hello-Agents 随记 | [阅读](./hello-agent%E9%9A%8F%E8%AE%B0.md) | [PDF](./%E5%AF%BC%E5%87%BA/hello-agent%E9%9A%8F%E8%AE%B0.pdf) |
+| 笔记 | 离线版 |
+| :-- | :--: |
+| [JVM](./jvm.md) | [PDF](./%E5%AF%BC%E5%87%BA/jvm.pdf) |
+| [Spring](./Spring.md) | [PDF](./%E5%AF%BC%E5%87%BA/Spring.pdf) |
+| [MySQL](./MySQL%E9%AB%98%E7%BA%A7%E5%AE%8B%E7%BA%A2%E5%BA%B7.md) | [PDF](./%E5%AF%BC%E5%87%BA/MySQL%E9%AB%98%E7%BA%A7%E5%AE%8B%E7%BA%A2%E5%BA%B7.pdf) |
+| [并发编程](./%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B.md) | [PDF](./%E5%AF%BC%E5%87%BA/%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B.pdf) |
+| [Hello-Agents 随记](./hello-agent%E9%9A%8F%E8%AE%B0.md) | [PDF](./%E5%AF%BC%E5%87%BA/hello-agent%E9%9A%8F%E8%AE%B0.pdf) |
 
 ## 按主题浏览
 
