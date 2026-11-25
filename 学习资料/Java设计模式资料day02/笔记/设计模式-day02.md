@@ -364,7 +364,7 @@ public class Demo {
 
 对上面的代码大家应该很熟，使用迭代器遍历集合，获取集合中的元素。而单列集合获取迭代器的方法就使用到了工厂方法模式。我们看通过类图看看结构：
 
-<img src="img/JDK源码解析.png" style="zoom:75%;" />
+<img src="img/jdk%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90.png" style="zoom:75%;" />
 
 Collection接口是抽象工厂类，ArrayList是具体的工厂类；Iterator接口是抽象商品类，ArrayList类中的Iter内部类是具体的商品类。在具体的工厂类中iterator()方法创建具体的商品类的对象。
 
@@ -392,7 +392,7 @@ Collection接口是抽象工厂类，ArrayList是具体的工厂类；Iterator�
 
 接口类图如下：
 
-![](img\原型模式.png)
+![](img/%E5%8E%9F%E5%9E%8B%E6%A8%A1%E5%BC%8F.png)
 
 ### 4.3.3 实现
 
@@ -442,7 +442,7 @@ public class PrototypeTest {
 
 类图如下：
 
-<img src="img\原型模式1.png" style="zoom:80%;" />
+<img src="img/%E5%8E%9F%E5%9E%8B%E6%A8%A1%E5%BC%8F1.png" style="zoom:80%;" />
 
 代码如下：
 
@@ -573,7 +573,7 @@ public class CitationTest {
 
 运行结果为：
 
-<img src="img\原型模式2.png" style="zoom:80%;" />
+<img src="img/%E5%8E%9F%E5%9E%8B%E6%A8%A1%E5%BC%8F2.png" style="zoom:80%;" />
 
 <font color="red">说明：</font>
 
@@ -611,7 +611,7 @@ public class CitationTest1 {
 
 运行结果为：
 
-<img src="img\原型模式3.png" style="zoom:80%;" />
+<img src="img/%E5%8E%9F%E5%9E%8B%E6%A8%A1%E5%BC%8F3.png" style="zoom:80%;" />
 
 > 注意：Citation类和Student类必须实现Serializable接口，否则会抛NotSerializableException异常。
 

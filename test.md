@@ -34,7 +34,7 @@ mappedHandler = this.getHandler(processedRequest);
 HandlerAdapter ha = this.getHandlerAdapter(mappedHandler.getHandler());
 ```
 
-![image-20220111090834908](D:\我的坚果云\springBootImg\Image5.png)
+![image-20220111090834908](springBootImg/Image5.png)
 
 **HandlerAdapter**：
 
@@ -64,11 +64,11 @@ invokeHandlerMethod()中：
 
 ​	Controller中方法能写多少种参数类型。取决于参数解析器。
 
-![image-20220111092446889](D:\我的坚果云\springBootImg\image-20220111092446889.png)
+![image-20220111092446889](springBootImg/image-20220111092446889.png)
 
 ##### 3.4 **this.returnValueHandlers():返回值处理器**，即方法可以返回的返回值类型，Model ，view，或ModelAndView共15种
 
-![image-20220111092905515](D:\我的坚果云\springBootImg\image-20220111092905515.png)
+![image-20220111092905515](springBootImg/image-20220111092905515.png)
 
 ##### 3.5 执行目标方法，获取目法的参数值
 

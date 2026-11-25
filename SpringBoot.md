@@ -8,11 +8,11 @@ typora-root-url: springBootImg
 
 ##### 	快速创建
 
-![Image](/Image.png)
+![Image](springBootImg/Image.png)
 
-![Image1](/Image1.png)
+![Image1](springBootImg/Image1.png)
 
-![Image2](/Image2.png)
+![Image2](springBootImg/Image2.png)
 
 ![Image](SpringBoot.assets/Image.png)
 
@@ -193,7 +193,7 @@ users3: [{name: Tom,age: 4},{name: jerry, age: 14}] //对象数组格式三
 
 ​	yaml中保存单个数据，可以通过spring中的注解直接读取，  @value读取单个数据，属性名引用方式 <font color="#ff0000"><b>${一级属性名.二级属性名……}</b></font>
 
-![image-20220104094834498](/image-20220104094834498.png)
+![image-20220104094834498](springBootImg/image-20220104094834498.png)
 
 
 
@@ -226,7 +226,7 @@ springBoot提供了可以将一组yaml对象数据封装在一个Java对象的�
 2. 创建的bean的数据属性名与yaml配置信息的变量名一一对象
 3. 在调用方法中@autowaireed
 
-![image-20220104103813041](/image-20220104103813041.png)
+![image-20220104103813041](springBootImg/image-20220104103813041.png)
 
 ## SpringBoot实现SSMP整合
 
@@ -259,7 +259,7 @@ springBoot提供了可以将一组yaml对象数据封装在一个Java对象的�
 
 - 创建springboot工程，添加一下模块
 
-![image-20220104144123937](/image-20220104144123937.png)
+![image-20220104144123937](springBootImg/image-20220104144123937.png)
 
 - 在application.yml中配置文件，
 
@@ -318,7 +318,7 @@ public interface BookDao {
         </dependency>
 ```
 
-![image-20220104145240623](/image-20220104145240623.png)
+![image-20220104145240623](springBootImg/image-20220104145240623.png)
 
 **步骤②**：配置数据源相关信息
 
@@ -483,7 +483,7 @@ mybatis-plus:  global-config:    db-config:      table-prefix: tbl_      id-type
 
 有多种日志格式可供选择
 
-![image-20220104165317560](/image-20220104165317560.png)
+![image-20220104165317560](springBootImg/image-20220104165317560.png)
 
 ### 3，数据层-分页设置
 
@@ -1270,7 +1270,7 @@ java –jar springboot.jar –-server.port=80 --logging.level.root=debug
 
 属性临时配置，本质是临时设置属性，覆盖原始属性。配置读取的优先顺序。
 
-![image-20220106210641077](/image-20220106210641077.png)
+![image-20220106210641077](springBootImg/image-20220106210641077.png)
 
 该图片的优先级顺序，自上而下，优先级加高。
 
@@ -1280,7 +1280,7 @@ java –jar springboot.jar –-server.port=80 --logging.level.root=debug
 
 1，在Program arguments对应位置添加临时属性。
 
-![image-20220106212156108](/image-20220106212156108.png)
+![image-20220106212156108](springBootImg/image-20220106212156108.png)
 
 2，改变传入的参数，args。
 
@@ -2041,7 +2041,7 @@ idea中搜索安装lombok插件
 
 ### 05，Web开发
 
-![yuque_diagram](/yuque_diagram.jpg)
+![yuque_diagram](springBootImg/yuque_diagram.jpg)
 
 
 
@@ -2324,7 +2324,7 @@ spring:
 
 ###### 3.1.2请求映射原理
 
-![image-20220110163131884](image-20220110163131884.png)
+![image-20220110163131884](springBootImg/image-20220110163131884.png)
 
 
 
@@ -2370,13 +2370,13 @@ HandlerMapping为多个，（处理器映射，即通过求取网址来判断交
 
    HandlerMapping中配置了请求和Handler（controller的对应信息）
 
-![](image-20220110170043428.png)
+![](springBootImg/image-20220110170043428.png)
 
 
 
 **RequestMappingHandlerMapping**：保存了所有@RequestMapping 和handler的映射规则
 
-![image-20220110170147408]( image-20220110170147408.png)
+![image-20220110170147408]( springBootImg/image-20220110170147408.png)
 
 所有的请求映射都在HandlerMapping中
 
@@ -2508,9 +2508,9 @@ Map<String,Object> map,  Model model, HttpServletRequest request   **都是可�
 private final ModelMap defaultModel = new BindingAwareModelMap();
 ```
 
-![image-20220111150023038](/../SpringBoot.assets/image-20220111150023038.png)
+![image-20220111150023038](SpringBoot.assets/image-20220111150023038.png)
 
-![image-20220111151138287](/../SpringBoot.assets/image-20220111151138287.png)
+![image-20220111151138287](SpringBoot.assets/image-20220111151138287.png)
 
 
 
@@ -2558,7 +2558,7 @@ mappedHandler = this.getHandler(processedRequest);
 HandlerAdapter ha = this.getHandlerAdapter(mappedHandler.getHandler());
 ```
 
-![image-20220111090834908](Image5.png)
+![image-20220111090834908](springBootImg/Image5.png)
 
 **HandlerAdapter**：
 
@@ -2590,13 +2590,13 @@ invokeHandlerMethod()中：
 
 ​	Controller中方法能写多少种参数类型。取决于参数解析器。
 
-![image-20220111092446889](image-20220111092446889.png)
+![image-20220111092446889](springBootImg/image-20220111092446889.png)
 
 ##### 3.4返回值处理器
 
  **this.returnValueHandlers():返回值处理器**，即方法可以返回的返回值类型，Model ，view，或ModelAndView共15种
 
-![image-20220111092905515]( image-20220111092905515.png)
+![image-20220111092905515]( springBootImg/image-20220111092905515.png)
 
 ##### 3.5.1 执行目标方法，获取目法的参数值
 
@@ -2819,7 +2819,7 @@ GenericConversionService：在设置每一个值的时候找到它里面的所�
 
 **byte -- > file**
 
-![image.png](ergewrgewrgwedws)
+![image.png](springBootImg/ergewrgewrgwedws)
 
 
 
@@ -2833,7 +2833,7 @@ GenericConversionService：在设置每一个值的时候找到它里面的所�
 
 **目标方法执行完后，返回ModelAndView对象，包含view 前往的地址，以及Model数据**
 
-![image-20220111154110734](image-20220111154110734.png)
+![image-20220111154110734](springBootImg/image-20220111154110734.png)
 
 ##### 3.7处理派发结果
 
@@ -2888,13 +2888,13 @@ GenericConversionService：在设置每一个值的时候找到它里面的所�
 
 #### 4，数据响应与数据协商
 
-![image-20220111212952548](image-20220111212952548.png)
+![image-20220111212952548](springBootImg/image-20220111212952548.png)
 
 ##### 4.1返回值设定
 
 ###### 4.1.1返回值解析器：
 
-![image-20220111213114551](image-20220111213114551.png)
+![image-20220111213114551](springBootImg/image-20220111213114551.png)
 
 
 
@@ -2939,7 +2939,7 @@ invokeAndHandle方法中，在执行完invoke并返回值后，对返回值进�
 
 - 调用selectHandler方法选择返回值处理器。处理器内部方法如下
 
-![image-20220111214625831](image-20220111214625831.png)
+![image-20220111214625831](springBootImg/image-20220111214625831.png)
 
 ==SpringMVC支持的返回值类型==
 
@@ -2980,7 +2980,7 @@ WebAsyncTask
 
 - **MessageConverter规范**
 
-![image-20220112113639453](/image-20220112113639453.png)
+![image-20220112113639453](springBootImg/image-20220112113639453.png)
 
 HttpMessageConverter: 看是否支持将 此 Class类型的对象，转为MediaType类型的数据。
 
@@ -2988,7 +2988,7 @@ HttpMessageConverter: 看是否支持将 此 Class类型的对象，转为MediaT
 
 - **默认的MessageConverter**
 
-![image-20220112113923124](/image-20220112113923124.png)
+![image-20220112113923124](springBootImg/image-20220112113923124.png)
 
 0 - 只支持Byte类型的
 
@@ -3031,7 +3031,7 @@ HttpMessageConverter: 看是否支持将 此 Class类型的对象，转为MediaT
 
 只需要改变请求头中Accept字段。Http协议中规定的，告诉服务器本客户端可以接收的数据类型。
 
-![img](/违法问问)
+![img](springBootImg/%E8%BF%9D%E6%B3%95%E9%97%AE%E9%97%AE)
 
 
 
@@ -3055,13 +3055,13 @@ HttpMessageConverter: 看是否支持将 此 Class类型的对象，转为MediaT
 
 设置yaml文件后，基于请求参数的内容协商也开启了，而且权重高于系统默认的内容协商
 
-![image-20220112154139933](/image-20220112154139933.png)
+![image-20220112154139933](springBootImg/image-20220112154139933.png)
 
 确定客户端接收什么样的内容类型；
 
 1、Parameter策略优先确定是要返回请求参数设定的数据（获取请求头中的format的值）
 
-![image-20220112154832611](/image-20220112154832611.png)
+![image-20220112154832611](springBootImg/image-20220112154832611.png)
 
 2、最终进行内容协商返回给客户端设定的数据类型即可。
 
@@ -3074,11 +3074,11 @@ HttpMessageConverter: 看是否支持将 此 Class类型的对象，转为MediaT
    1. asd
 3. 遍历循环所有当前系统的 **MessageConverter**，看谁支持操作这个对象（Person）
 4. 找到支持操作Person的converter，把支持converter支持的媒体类型统计出来
-5. 客户端需要【application/xml】。服务端能力【10种、json、xml】![image-20220112151317739](/image-20220112151317739.png)
+5. 客户端需要【application/xml】。服务端能力【10种、json、xml】![image-20220112151317739](springBootImg/image-20220112151317739.png)
 6. 进行内容协商得出最佳的匹配媒体类型
 7. 用支持将对象转为最佳匹配媒体类型 的converter。调用它进行转化
 
-![image-20220112150147892](/image-20220112150147892.png)
+![image-20220112150147892](springBootImg/image-20220112150147892.png)
 
 
 
@@ -3167,7 +3167,7 @@ public class yyMessageConverter implements HttpMessageConverter<Person> {
 
 视图解析：**SpringBoot默认不支持 JSP，需要引入第三方模板引擎技术实现页面渲染。**
 
-![image-20220112172510841](/image-20220112172510841.png)
+![image-20220112172510841](springBootImg/image-20220112172510841.png)
 
 ##### 1，视图解析原理流程
 
@@ -3178,10 +3178,10 @@ public class yyMessageConverter implements HttpMessageConverter<Person> {
    1. render(mv, request, response)**视图渲染逻辑**
       1. 根据方法的String返回值(即视图名)得到View对象【定义了页面的渲染逻辑】
          1. 通过所有的视图解析器尝试是否能根据当前返回值得到View对象
-            ![image-20220113171432457](/image-20220113171432457-16420652742781.png)
+            ![image-20220113171432457](springBootImg/image-20220113171432457-16420652742781.png)
          2. 根据方法返回值请求，得到最好的View。本质是构造一个新的view
          3. ContentNegotiationViewResolver 里面包含所有的视图解析器，内部还是利用ContentNegotiationViewResolver得到视图对象。
-            ![image-20220113172820082](/image-20220113172820082-16420661041662.png)
+            ![image-20220113172820082](springBootImg/image-20220113172820082-16420661041662.png)
          4. view.render(mv.getModelInternal(), request, response); -->视图对象调用自定义的render进行页面渲染
             1. **RedirectView 如何渲染【重定向到一个页面】**
             2. 获取目标url地址
@@ -3474,7 +3474,7 @@ public class AdminWebConfig implements WebMvcConfigurer {
 5. 执行结束后，**倒序执行applyPostHandle**
 6. 前面的步骤有任何异常都会直接触发**afterCompletion（倒序执行）**
 
-![image-20220113213344709](/image-20220113213344709-16420808259043.png)
+![image-20220113213344709](springBootImg/image-20220113213344709-16420808259043.png)
 
 
 
@@ -3557,9 +3557,9 @@ public class AdminWebConfig implements WebMvcConfigurer {
 
 - 对于机器客户端，服务器生成json响应，其中包含错误，http状态和异常消息的详细信息。对于游览器客户端，响应一个“whitelabel”错误视图。以html格式呈现相同的数据
 
-  ![image-20220114102339763](/image-20220114102339763-16421270218084.png)
+  ![image-20220114102339763](springBootImg/image-20220114102339763-16421270218084.png)
 
-![image-20220114102409945](/image-20220114102409945-16421270509515.png)
+![image-20220114102409945](springBootImg/image-20220114102409945-16421270509515.png)
 
 - 要对其进行自定义，添加View解析为error
 - **要完全替换默认行为，可以实现 `ErrorController `并注册该类型的Bean定义，或添加`ErrorAttributes类型的组件`以使用现有机制但替换其内容。**
@@ -3597,7 +3597,7 @@ public class AdminWebConfig implements WebMvcConfigurer {
 
 - Spring底层的异常，如参数类型转换异常，等等，使用**DefaultHandlerExceptionResolver 处理框架底层的异常**response.sendError(HttpServletResponse.SC_BAD_REQUEST, ex.getMessage());
 
-  ![image-20220114164641137](/image-20220114164641137.png)
+  ![image-20220114164641137](springBootImg/image-20220114164641137.png)
 
 
 
@@ -3621,7 +3621,7 @@ public class AdminWebConfig implements WebMvcConfigurer {
   }
   ```
 
-  ![image-20220114170545865](/image-20220114170545865.png)
+  ![image-20220114170545865](springBootImg/image-20220114170545865.png)
 
 ##### 3，异常处理自动配置原理
 
@@ -3631,7 +3631,7 @@ public class AdminWebConfig implements WebMvcConfigurer {
 
     - public class **DefaultErrorAttributes** implements ErrorAttributes, HandlerExceptionResolver
     - **DefaultErrorAttributes**：定义错误页面中可以包含哪些数据
-      ![image-20220114112936591](/image-20220114112936591-16421309782239.png)
+      ![image-20220114112936591](springBootImg/image-20220114112936591-16421309782239.png)
 
   - **容器中的组件：类型：BasicErrorController -->id:basicErrorController**
 
@@ -3650,14 +3650,14 @@ public class AdminWebConfig implements WebMvcConfigurer {
 
   BasicErrorController 中会根据请求方式的不同，返回不同的对象。**即有两个处理方法，可以返回html数据和json数据**
 
-  ![image-20220114110652165](/image-20220114110652165-16421296133847.png)
+  ![image-20220114110652165](springBootImg/image-20220114110652165-16421296133847.png)
 
-  ![image-20220114110638062](/image-20220114110638062-16421295990176.png)
+  ![image-20220114110638062](springBootImg/image-20220114110638062-16421295990176.png)
 
 - **DefaultErrorViewResolver：错误视图解析器**
   - 如果发送错误，会以http的状态码作为视图也地址（viewName），找到真正的页面
   - error/404.html   5xx.html
-  - ![image-20220114112655334](/image-20220114112655334-16421308164748.png)
+  - ![image-20220114112655334](springBootImg/image-20220114112655334-16421308164748.png)
 
 ##### 4，异常处理步骤
 
@@ -3675,12 +3675,12 @@ public class AdminWebConfig implements WebMvcConfigurer {
 
    1. 遍历所有的handlerExceptionResolvers，寻找能处理当前异常的异常解析器【HandlerExceptionResolver处理器异常解析器】
    2. 系统默认的异常解析器：
-      ![image-20220114144957100](/image-20220114144957100.png)
+      ![image-20220114144957100](springBootImg/image-20220114144957100.png)
       1. **DefaultErrorAttributes**首先处理异常，把异常信息保存到request域中，并返回null
       2. 默认没有处理器能够处理异常，所以异常会被抛出
       3. **如果异常抛出，底层会发送/error请求。BasicErrorController进行处理**
       4. 解析错误视图：遍历所有的ErrorViewResolver 查找能解析的解析器
-         ![image-20220114152138068](/image-20220114152138068.png)
+         ![image-20220114152138068](springBootImg/image-20220114152138068.png)
       5. **默认的** **DefaultErrorViewResolver ,作用是把响应状态码作为错误页的地址，error/500.html** 
       6. 模板引擎最终响应这个页面** **error/500.html** 
 
@@ -3753,7 +3753,7 @@ public class MyFilter implements Filter {
 - 通过DispatcherServletRegistrationBean<dispatcherServlet>把dispatcherServlet配置进来
 
 - 默认映射路径为 /*
-  ![image-20220114201030917](/image-20220114201030917.png)
+  ![image-20220114201030917](springBootImg/image-20220114201030917.png)
 
   解释为什么自己创建的servlet，拦截器并未拦截自己创建的servlet设置的路径。
 
@@ -4619,7 +4619,7 @@ class TestingAStackDemo {
         </dependency>
 ```
 
-![img](/1606886483335-697ee1c1-2f69-43ab-bddc-3a038382319c.png)
+![img](springBootImg/1606886483335-697ee1c1-2f69-43ab-bddc-3a038382319c.png)
 
 ##### 2、1.x与2.x的不同
 
@@ -4751,7 +4751,7 @@ https://github.com/codecentric/spring-boot-admin
 
 
 
-![img](/1606909073222-c6e77ca3-4b1c-4f38-a1c6-8614dec4f7bc.png)
+![img](springBootImg/1606909073222-c6e77ca3-4b1c-4f38-a1c6-8614dec4f7bc.png)
 
 
 
@@ -5161,7 +5161,7 @@ Spring原理【[Spring注解](https://www.bilibili.com/video/BV1gW411W7wy?p=1)�
 
       - 遍历所有的ApplicationContextInitializer，调用initialize(context)方法。对ioc容器进行初始化扩展功能。
 
-      ![image-20220119092722583](/image-20220119092722583.png)
+      ![image-20220119092722583](springBootImg/image-20220119092722583.png)
     
   - contextPrepared()：遍历所有的listeners，**EventPublishRunListenr:通知所有的监听器，准备阶段**
     

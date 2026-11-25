@@ -60,7 +60,7 @@ typora-copy-images-to: JavaWeb
 
 2，为元素相应的事件属性赋值一个方法 onclick 
 
-![Image](D:\我的坚果云\JavaWeb\Image.png)
+![Image](JavaWeb/Image.png)
 
 3,事件发生以后会自动调用
 
@@ -1231,7 +1231,7 @@ Cookie是客户端技术,程序把每个用户的数据以cookie的形式写给�
 
 ### 3，实现
 
-![Image](F:\我的坚果云\JavaWeb\Image1.png)
+![Image](JavaWeb/Image1.png)
 
 在对cookie操作后，要进行response.addCookie(cookie);发送给游览器保存cookie
 
@@ -1252,11 +1252,11 @@ Cookie是客户端技术,程序把每个用户的数据以cookie的形式写给�
   seconds < 0: 会话Cookie
   seconds > 0: 存储指定的秒数.
 
-![Image](F:\我的坚果云\JavaWeb\Imaefaefsage.png)
+![Image](JavaWeb/Imaefaefsage.png)
 
 Cookie 中的key和value不支持中文
 
-![image-20220208172341996](F:\我的坚果云\JavaWeb\image-20220208172341996.png)
+![image-20220208172341996](JavaWeb/image-20220208172341996.png)
 
 ### 6，Cookie路径
 
@@ -1275,11 +1275,11 @@ Cookie在创建的时候，根据当前servlet的相对位置来设置自己的�
 
 ### 1，简介
 
-![Image](F:\我的坚果云\JavaWeb\Imagedsasdfasdfasd.png)
+![Image](JavaWeb/Imagedsasdfasdfasd.png)
 
 **cookie在客户端，session在服务器端**
 
-![Image](F:\我的坚果云\JavaWeb\Imasdgasdfasdfasdge.png)
+![Image](JavaWeb/Imasdgasdfasdfasdge.png)
 
 首先客户端登录账号密码访问服务器，服务器收到请求后获取参数内容，创建session，并取得sessionID，将sessionID创建cookie`Cookie c = new Cookie("JSESSIONID", sessionid` ,然后发给客户端，客户端获取sessionid，并存放在游览器，客户端再次请求服务器时，会携带带有sessionID的cookie，服务器根据sessionID获取session对象，并在该session中恢复对话，获取共享数据
 
@@ -1423,7 +1423,7 @@ FilterConfig 类的作用是获取 filter 过滤器的配置内容
 
 ### 7，Filter链
 
-![Image](F:\我的坚果云\JavaWeb\Image1234.png)
+![Image](JavaWeb/Image1234.png)
 
 ### 8，dispatcher配置
 
@@ -1459,9 +1459,9 @@ Web中的一个组件/程序,类似于Servlet/Filter;监听器就是监听某个
 
 ### 2，八大监听器（接口）
 
-![image-20220211213050539](F:\我的坚果云\JavaWeb\image-20220211213050539.png)
+![image-20220211213050539](JavaWeb/image-20220211213050539.png)
 
-![image-20220211213846712](F:\我的坚果云\JavaWeb\image-20220211213846712.png)
+![image-20220211213846712](JavaWeb/image-20220211213846712.png)
 
 ### 3，生命周期监听器：
 
