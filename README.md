@@ -1,8 +1,16 @@
-# `~/notes`
+<h1 align="center">开发笔记</h1>
 
-开发笔记 · Java 后端、分布式系统与 AI Agent
+<p align="center">Java 后端、分布式系统与 AI Agent</p>
 
-**[文件索引](./%E6%96%87%E4%BB%B6%E7%B4%A2%E5%BC%95.md)** · [专题](#按主题浏览) · [索引 PDF](./%E5%AF%BC%E5%87%BA/%E6%96%87%E4%BB%B6%E7%B4%A2%E5%BC%95.pdf) · [首页 PDF](./%E5%AF%BC%E5%87%BA/README.pdf)
+<p align="center">
+  <a href="./%E6%96%87%E4%BB%B6%E7%B4%A2%E5%BC%95.md"><strong>浏览文件&nbsp;›</strong></a>
+  &nbsp;&nbsp;&nbsp;
+  <a href="./%E5%AF%BC%E5%87%BA/%E6%96%87%E4%BB%B6%E7%B4%A2%E5%BC%95.pdf">离线阅读&nbsp;›</a>
+</p>
+
+<p align="center">
+  <img src="./assets/notes-hero.webp" alt="三层交叠的浅蓝色光学玻璃" width="840">
+</p>
 
 ## 阅读入口
 
@@ -147,3 +155,5 @@
 - [test](./test.md) · [PDF](./%E5%AF%BC%E5%87%BA/test.pdf)
 
 </details>
+
+[首页 PDF](./%E5%AF%BC%E5%87%BA/README.pdf)
