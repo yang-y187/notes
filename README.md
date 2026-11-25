@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <img src="./assets/notes-hero.webp" alt="三层交叠的浅蓝色光学玻璃" width="840">
+  <a href="./hello-agent%E9%9A%8F%E8%AE%B0.md"><img src="./assets/notes-workspace.webp" alt="打开 Hello-Agents 随记，查看 ContextBuilder 的收集、筛选、结构化和压缩流程" width="840"></a>
 </p>
 
 ## 阅读入口
