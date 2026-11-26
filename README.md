@@ -9,13 +9,19 @@
 </p>
 
 <p align="center">
-  <a href="./jvm.md"><img src="./assets/readme-java.svg" alt="Java 笔记" height="28"></a>
-  <a href="./Spring.md"><img src="./assets/readme-spring.svg" alt="Spring 笔记" height="28"></a>
-  <a href="./MySQL%E9%AB%98%E7%BA%A7%E5%AE%8B%E7%BA%A2%E5%BA%B7.md"><img src="./assets/readme-mysql.svg" alt="MySQL 笔记" height="28"></a>
+  <a href="./jvm.md"><img src="./assets/readme-java.svg" alt="Java 笔记" width="72" height="26"></a>
+  <a href="./Spring.md"><img src="./assets/readme-spring.svg" alt="Spring 笔记" width="89" height="26"></a>
+  <a href="./SpringBoot.md"><img src="./assets/readme-spring-boot.svg" alt="Spring Boot 笔记" width="127" height="26"></a>
+  <a href="./Go.md"><img src="./assets/readme-go.svg" alt="Go 笔记" width="58" height="26"></a>
+  <a href="./Netty.md"><img src="./assets/readme-netty.svg" alt="Netty 笔记" width="80" height="26"></a>
+  <a href="./%E9%9D%A2%E8%AF%95/Linux%E9%9D%A2%E8%AF%95%E9%A2%98.md"><img src="./assets/readme-linux.svg" alt="Linux 笔记" width="80" height="26"></a>
   <br>
-  <a href="./%E7%BB%BC%E5%90%88/redis.md"><img src="./assets/readme-redis.svg" alt="Redis 笔记" height="28"></a>
-  <a href="./Kafka.md"><img src="./assets/readme-kafka.svg" alt="Kafka 笔记" height="28"></a>
-  <a href="./hello-agent%E9%9A%8F%E8%AE%B0.md"><img src="./assets/readme-agent.svg" alt="Agent 笔记" height="28"></a>
+  <a href="./MySQL%E9%AB%98%E7%BA%A7%E5%AE%8B%E7%BA%A2%E5%BA%B7.md"><img src="./assets/readme-mysql.svg" alt="MySQL 笔记" width="82" height="26"></a>
+  <a href="./%E7%BB%BC%E5%90%88/redis.md"><img src="./assets/readme-redis.svg" alt="Redis 笔记" width="79" height="26"></a>
+  <a href="./RabbitMQ.md"><img src="./assets/readme-rabbitmq.svg" alt="RabbitMQ 笔记" width="107" height="26"></a>
+  <a href="./Kafka.md"><img src="./assets/readme-kafka.svg" alt="Kafka 笔记" width="81" height="26"></a>
+  <a href="./Elasticsearch.md"><img src="./assets/readme-elasticsearch.svg" alt="Elasticsearch 笔记" width="143" height="26"></a>
+  <a href="./hello-agent%E9%9A%8F%E8%AE%B0.md"><img src="./assets/readme-agent.svg" alt="Agent 笔记" width="81" height="26"></a>
 </p>
 
 <p align="center">
@@ -26,8 +32,8 @@
 
 <p align="center">
   <picture>
-    <source media="screen and (prefers-reduced-motion: no-preference)" srcset="./assets/notes-technology-wave.svg">
-    <img src="./assets/notes-technology-wave-static.svg" alt="紫色 3D 技术波形，展示 Java、分布式系统和 Agent 主题" width="840">
+    <source media="screen and (prefers-reduced-motion: no-preference)" srcset="./assets/notes-waveform.svg">
+    <img src="./assets/notes-waveform-static.svg" alt="深紫色 3D 波动图，网格曲面循环起伏" width="840">
   </picture>
 </p>
 
