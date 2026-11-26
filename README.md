@@ -24,6 +24,10 @@
   <a href="./hello-agent%E9%9A%8F%E8%AE%B0.md">Hello-Agents 随记</a>
 </p>
 
+<p align="center">
+  <a href="https://github.com/yang-y187"><img src="./assets/notes-contribution-tower.webp" alt="yang-y187 最近 26 周 GitHub 公开贡献，17 次贡献，10 个活跃日，单日最多 6 次，截至 2026-11-26。" width="840"></a>
+</p>
+
 ## 按主题浏览
 
 <details>
