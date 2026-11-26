@@ -32,8 +32,9 @@
 
 <p align="center">
   <picture>
+    <!-- Quote: Steve Jobs, quoted by Rob Walker, The Guts of a New Machine, 2003. https://designobserver.com/the-guts-of-a-new-machine/ -->
     <source media="screen and (prefers-reduced-motion: no-preference)" srcset="./assets/notes-waveform.svg">
-    <img src="./assets/notes-waveform-static.svg" alt="深紫色 3D 波动图，网格曲面循环起伏" width="840">
+    <img src="./assets/notes-waveform-static.svg" alt="Design is how it works. — Steve Jobs. 深紫色网格曲面循环起伏。" width="840">
   </picture>
 </p>
 

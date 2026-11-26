@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1180" height="392" viewBox="0 0 1180 392" role="img" aria-labelledby="waveform-title">
-<title id="waveform-title">波动图</title>
+<title id="waveform-title">Design is how it works. — Steve Jobs</title>
 <desc>深紫色连续三维网格波面的示意画面。</desc>
 <defs>
   <linearGradient id="base" x1="0" y1="0" x2="1" y2="1" gradientUnits="objectBoundingBox"><stop stop-color="#171125"/><stop offset="1" stop-color="#0C0B19"/></linearGradient>
@@ -85,7 +85,8 @@
 <path d="M1105,231C1103,232 1098,236 1094,238C1090,241 1086,243 1083,245C1079,246 1075,248 1071,248C1068,249 1064,248 1060,248C1056,247 1053,245 1049,244C1045,242 1041,239 1038,237C1034,236 1030,233 1026,233C1023,232 1019,231 1015,232C1011,233 1006,237 1004,238" stroke="#C9AAFF" stroke-opacity=".29" stroke-width=".8"></path>
 </g>
 <g font-family="Segoe UI, Microsoft YaHei, PingFang SC, sans-serif">
-  <text x="56" y="191" fill="#F1E9FF" font-size="40" font-weight="700">波动图</text>
-  <path d="M58 216h57" stroke="#AB84F9" stroke-width="2.5" stroke-linecap="round"/>
+  <text x="56" y="160" fill="#F1E9FF" font-size="31" font-weight="700" letter-spacing="-.4"><tspan x="56">Design is</tspan><tspan x="56" dy="37">how it works.</tspan></text>
+  <text x="56" y="232" fill="#BFB0D9" font-size="15" font-weight="600" letter-spacing="1.6">STEVE JOBS</text>
+  <path d="M58 252h57" stroke="#AB84F9" stroke-width="2.5" stroke-linecap="round"/>
 </g>
 </svg>
