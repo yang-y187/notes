@@ -25,7 +25,10 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/yang-y187"><img src="./assets/notes-contribution-tower.webp" alt="yang-y187 最近 26 周 GitHub 公开贡献，17 次贡献，10 个活跃日，单日最多 6 次，截至 2026-11-26。" width="840"></a>
+  <picture>
+    <source media="screen and (prefers-reduced-motion: no-preference)" srcset="./assets/notes-technology-wave.svg">
+    <img src="./assets/notes-technology-wave-static.svg" alt="紫色 3D 技术波形，展示 Java、分布式系统和 Agent 主题" width="840">
+  </picture>
 </p>
 
 ## 按主题浏览
