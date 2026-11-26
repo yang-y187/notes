@@ -15,7 +15,7 @@
   <br>
   <a href="./%E7%BB%BC%E5%90%88/redis.md"><img src="./assets/readme-redis.svg" alt="Redis 笔记" height="28"></a>
   <a href="./Kafka.md"><img src="./assets/readme-kafka.svg" alt="Kafka 笔记" height="28"></a>
-  <a href="./LangChain.md"><img src="./assets/readme-langchain.svg" alt="LangChain 笔记" height="28"></a>
+  <a href="./hello-agent%E9%9A%8F%E8%AE%B0.md"><img src="./assets/readme-agent.svg" alt="Agent 笔记" height="28"></a>
 </p>
 
 <p align="center">
