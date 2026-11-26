@@ -1,22 +1,28 @@
+<!-- README presentation inspired by wOLFSMITh's GitHub Profile Guide. Typing animation: Readme Typing SVG. Topic badges: Shields.io. -->
 <h1 align="center">开发笔记</h1>
 
-<p align="center">Java 后端、分布式系统与 AI Agent</p>
-
 <p align="center">
-  <a href="./%E6%96%87%E4%BB%B6%E7%B4%A2%E5%BC%95.md"><strong>浏览文件&nbsp;›</strong></a>
-  &nbsp;&nbsp;&nbsp;
-  <a href="./%E5%AF%BC%E5%87%BA/%E6%96%87%E4%BB%B6%E7%B4%A2%E5%BC%95.pdf">离线阅读&nbsp;›</a>
+  <picture>
+    <source media="screen and (prefers-reduced-motion: no-preference)" srcset="./assets/readme-typing.svg">
+    <img src="./assets/readme-topics.svg" alt="Java 后端、分布式系统与 AI Agent" width="420" height="53">
+  </picture>
 </p>
 
 <p align="center">
-  <a href="./hello-agent%E9%9A%8F%E8%AE%B0.md"><img src="./assets/notes-workspace.webp" alt="打开 Hello-Agents 随记，查看 ContextBuilder 的收集、筛选、结构化和压缩流程" width="840"></a>
+  <a href="./jvm.md"><img src="./assets/readme-java.svg" alt="Java 笔记" height="28"></a>
+  <a href="./Spring.md"><img src="./assets/readme-spring.svg" alt="Spring 笔记" height="28"></a>
+  <a href="./MySQL%E9%AB%98%E7%BA%A7%E5%AE%8B%E7%BA%A2%E5%BA%B7.md"><img src="./assets/readme-mysql.svg" alt="MySQL 笔记" height="28"></a>
+  <br>
+  <a href="./%E7%BB%BC%E5%90%88/redis.md"><img src="./assets/readme-redis.svg" alt="Redis 笔记" height="28"></a>
+  <a href="./Kafka.md"><img src="./assets/readme-kafka.svg" alt="Kafka 笔记" height="28"></a>
+  <a href="./LangChain.md"><img src="./assets/readme-langchain.svg" alt="LangChain 笔记" height="28"></a>
 </p>
 
-## 阅读入口
-
-`backend`　[JVM](./jvm.md) · [Spring](./Spring.md) · [MySQL](./MySQL%E9%AB%98%E7%BA%A7%E5%AE%8B%E7%BA%A2%E5%BA%B7.md)<br>
-`systems`　[操作系统](./%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F.md) · [并发编程](./%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B.md) · [RPC](./rpc.md)<br>
-`agents`　[Hello-Agents](./hello-agent%E9%9A%8F%E8%AE%B0.md) · [LangChain](./LangChain.md)
+<p align="center">
+  <a href="./%E6%96%87%E4%BB%B6%E7%B4%A2%E5%BC%95.md"><strong>文件索引</strong></a> ·
+  <a href="./%E5%AF%BC%E5%87%BA/%E6%96%87%E4%BB%B6%E7%B4%A2%E5%BC%95.pdf">离线 PDF</a> ·
+  <a href="./hello-agent%E9%9A%8F%E8%AE%B0.md">Hello-Agents 随记</a>
+</p>
 
 ## 按主题浏览
 
