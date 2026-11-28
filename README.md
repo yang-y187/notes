@@ -123,7 +123,7 @@
 <summary><strong>AI 与 Agent</strong> · Hello-Agents、LangChain</summary>
 
 - [hello-agent随记](./hello-agent%E9%9A%8F%E8%AE%B0.md) · [PDF](./%E5%AF%BC%E5%87%BA/hello-agent%E9%9A%8F%E8%AE%B0.pdf)
-- [LangChain](./LangChain.md) · [PDF](./%E5%AF%BC%E5%87%BA/LangChain.pdf)
+- [LangChain](./LangChain.md) · [PDF 预览](./%E5%AF%BC%E5%87%BA/LangChain-%E9%A2%84%E8%A7%88%E7%89%88.pdf) · [PDF 原版](./%E5%AF%BC%E5%87%BA/LangChain.pdf?raw=1)
 - [langGraph](./langGraph.md) · [PDF](./%E5%AF%BC%E5%87%BA/langGraph.pdf)
 - [transformer](./transformer.md) · [PDF](./%E5%AF%BC%E5%87%BA/transformer.pdf)
 
